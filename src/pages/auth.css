@@ -1,0 +1,134 @@
+/* PAGE */
+.auth-page {
+  min-height: 100vh;
+  background: radial-gradient(circle at top, #0f3d2e, #021a12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* CONTAINER */
+.auth-container {
+  position: relative;
+  width: 900px;
+  height: 480px;
+  background: #061e15;
+  border-radius: 18px;
+  box-shadow: 0 0 60px rgba(34, 255, 140, 0.25);
+  overflow: hidden;
+  display: flex;
+}
+
+/* PANELS */
+.panel {
+  width: 50%;
+  padding: 60px;
+  z-index: 2;
+}
+
+.left-panel {
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.left-panel h1 {
+  font-size: 40px;
+  margin-bottom: 10px;
+}
+
+.left-panel p {
+  opacity: 0.8;
+}
+
+/* RIGHT PANEL */
+.right-panel {
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.right-panel h2 {
+  margin-bottom: 30px;
+}
+
+/* INPUTS */
+.input-group {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.5);
+  margin-bottom: 22px;
+  padding-bottom: 6px;
+}
+
+.input-group svg {
+  margin-right: 10px;
+  opacity: 0.7;
+}
+
+.input-group input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: white;
+  width: 100%;
+}
+
+/* BUTTON */
+.auth-btn {
+  margin-top: 15px;
+  background: linear-gradient(135deg, #1ed760, #18a34a);
+  border: none;
+  border-radius: 25px;
+  padding: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.auth-btn:hover {
+  transform: scale(1.05);
+}
+
+/* SWITCH TEXT */
+.switch-text {
+  margin-top: 20px;
+  font-size: 14px;
+}
+
+.switch-text span {
+  color: #1ed760;
+  cursor: pointer;
+}
+
+/* DIAGONAL SHAPE */
+.diagonal-shape {
+  position: absolute;
+  width: 55%;
+  height: 140%;
+  background: linear-gradient(135deg, #1ed760, #0b6b3a);
+  top: -20%;
+  left: 45%;
+  transform: skewX(-18deg);
+  z-index: 1;
+  transition: all 0.6s ease;
+}
+
+/* SIGNUP ANIMATION */
+.signup-active .diagonal-shape {
+  left: -10%;
+}
+
+.signup-active .left-panel {
+  transform: translateX(100%);
+}
+
+.signup-active .right-panel {
+  transform: translateX(-100%);
+}
+
+.panel {
+  transition: transform 0.6s ease;
+}

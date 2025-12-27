@@ -1,0 +1,17 @@
+/* src/pages/herbal-journey.css */
+:root{
+  --herbal-50: #e8f4e6;
+  --herbal-100: #cfe8cf;
+  --forest-900: #102814;
+  --forest-800: #0f3a2b;
+}
+
+.bg-herbal-100{ background-color: var(--herbal-100); }
+.text-forest-900{ color: var(--forest-900); }
+.bg-forest-800{ background: var(--forest-800); }
+.bg-herbal-50{ background-color: var(--herbal-50); }
+
+/* decorative gradient used in hero card */
+.bg-forest-gradient{
+  background-image: radial-gradient( circle at 10% 20%, rgba(16,40,20,0.55), rgba(16,40,20,0.35) 30%, rgba(15,58,43,0.18) 55% );
+}

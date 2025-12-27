@@ -1,0 +1,38 @@
+/* Herbal Guide Active Card Highlighting */
+.herbal-guide-active {
+  position: relative;
+  z-index: 35;
+  transform: scale(1.02);
+  transition: transform 0.3s ease;
+}
+
+.herbal-guide-active::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  padding: 4px;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.6), rgba(16, 185, 129, 0.6));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: herbal-glow 2s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes herbal-glow {
+  0%, 100% {
+    opacity: 0.6;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 40px rgba(34, 197, 94, 0.8);
+  }
+}
+
+/* Smooth scroll behavior for highlighted cards */
+html {
+  scroll-behavior: smooth;
+}
+

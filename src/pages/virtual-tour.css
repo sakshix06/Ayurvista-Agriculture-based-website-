@@ -1,0 +1,85 @@
+/* ============================
+   VIRTUAL TOUR ONLY (ISOLATED)
+   ============================ */
+
+.vt-wrapper {
+  width: 100vw;
+  height: 100vh;
+  background: black;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Scene animation */
+.vt-wrapper .scene-fade {
+  animation: fadeScene 2s ease-in-out;
+}
+
+.vt-wrapper .scene-text {
+  animation: textReveal 2s ease-in-out;
+}
+
+/* Zoom effect */
+.vt-wrapper .vt-zoom {
+  animation: zoomSlow 5s ease-in-out forwards;
+}
+
+@keyframes zoomSlow {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
+
+/* Floating leaves */
+.vt-wrapper .vt-leaves {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.vt-wrapper .leaf {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: rgba(180, 255, 180, 0.4);
+  border-radius: 50%;
+  animation: leafFall 10s linear infinite;
+}
+
+@keyframes leafFall {
+  from {
+    transform: translateY(-10%) translateX(0);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(110%) translateX(40px);
+    opacity: 1;
+  }
+}
+
+/* Scene fade */
+@keyframes fadeScene {
+  from {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Text reveal */
+@keyframes textReveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

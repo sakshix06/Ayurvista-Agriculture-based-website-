@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .safe-area-inset {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+@layer base {
+  :root {
+    /* Soft Sage theme - Light mode */
+    --background: 105 26% 95%;
+    --foreground: 120 22% 12%;
+    --card: 105 26% 98%;
+    --card-foreground: 120 22% 12%;
+    --popover: 105 26% 98%;
+    --popover-foreground: 120 22% 12%;
+    --primary: 105 26% 71%;
+    --primary-foreground: 120 22% 12%;
+    --secondary: 105 26% 85%;
+    --secondary-foreground: 120 22% 12%;
+    --muted: 105 26% 90%;
+    --muted-foreground: 120 22% 35%;
+    --accent: 105 26% 71%;
+    --accent-foreground: 120 22% 12%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 105 26% 98%;
+    --border: 105 26% 80%;
+    --input: 105 26% 85%;
+    --ring: 105 26% 71%;
+    --chart-1: 105 26% 71%;
+    --chart-2: 120 22% 25%;
+    --chart-3: 105 26% 60%;
+    --chart-4: 120 22% 40%;
+    --chart-5: 105 26% 50%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Deep Olive theme - Dark mode */
+    --background: 120 22% 12%;
+    --foreground: 105 26% 85%;
+    --card: 120 22% 15%;
+    --card-foreground: 105 26% 85%;
+    --popover: 120 22% 15%;
+    --popover-foreground: 105 26% 85%;
+    --primary: 105 26% 71%;
+    --primary-foreground: 120 22% 12%;
+    --secondary: 120 22% 18%;
+    --secondary-foreground: 105 26% 85%;
+    --muted: 120 22% 18%;
+    --muted-foreground: 105 26% 65%;
+    --accent: 105 26% 71%;
+    --accent-foreground: 120 22% 12%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 105 26% 85%;
+    --border: 120 22% 20%;
+    --input: 120 22% 18%;
+    --ring: 105 26% 71%;
+    --chart-1: 105 26% 71%;
+    --chart-2: 120 22% 30%;
+    --chart-3: 105 26% 60%;
+    --chart-4: 120 22% 40%;
+    --chart-5: 105 26% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar styles */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
