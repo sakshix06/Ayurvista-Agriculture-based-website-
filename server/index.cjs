@@ -3,26 +3,24 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const fs = require("fs");
 const OpenAI = require("openai");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-app.use(express.static(path.join(__dirname, "../dist")));
+// ✅ Load env FIRST
+dotenv.config();
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../dist/index.html"));
-});
+const app = express();
 
-// 1️⃣ LOAD .env FIRST (VERY IMPORTANT)
-const envPath = path.join(__dirname, ".env");
-dotenv.config({ path: envPath });
+// ✅ Middlewares
+app.use(cors());
+app.use(express.json({ limit: "15mb" }));
 
-// 2️⃣ Initialize Gemini AFTER dotenv
+// ===============================
+// ✅ AI INITIALIZATION
+// ===============================
+
 const gemini = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
-// 3️⃣ Initialize OpenAI AFTER dotenv
 let openai = null;
 
 if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== "") {
@@ -31,30 +29,28 @@ if (process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim() !== "") {
   });
   console.log("✅ OpenAI client initialized");
 } else {
-  console.warn("⚠️ OPENAI_API_KEY not found. OpenAI endpoints will fail.");
+  console.warn("⚠️ OPENAI_API_KEY not found.");
 }
 
-// 2️⃣ Import routes
+// ===============================
+// ✅ ROUTES
+// ===============================
+
 const stripeRoutes = require("./routes/stripe.routes.cjs");
 const { mailerRouter } = require("./routes/mailer.routes.cjs");
 const orderRouter = require("./routes/order.routes.cjs");
 
-// 3️⃣ Create Express app
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: "15mb" }));
-
-// 4️⃣ Register routes
 app.use("/api/stripe", stripeRoutes);
 app.use("/api/mail", mailerRouter);
 app.use("/api/order", orderRouter);
 
+// ===============================
+// ✅ MongoDB Connection
+// ===============================
+
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/ayurvista";
-const JWT_SECRET =
-  process.env.JWT_SECRET || "dev-secret-please-change";
 
-// MongoDB connect
 mongoose
   .connect(MONGODB_URI)
   .then(() => console.log("✅ MongoDB connected successfully"))
@@ -63,16 +59,26 @@ mongoose
     console.log("📝 Using in-memory storage for development");
   });
 
-const userSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true, index: true },
-    passwordHash: { type: String, required: true },
-  },
-  { timestamps: true }
-);
+// ===============================
+// ✅ Serve Frontend (IMPORTANT)
+// ===============================
 
-const User = mongoose.model('User', userSchema);
+app.use(express.static(path.join(__dirname, "../dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../dist/index.html"));
+});
+
+// ===============================
+// ✅ Start Server
+// ===============================
+
+//const PORT = process.env.PORT || 10000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
 
 // Bookmark Schema
 const bookmarkSchema = new mongoose.Schema(
