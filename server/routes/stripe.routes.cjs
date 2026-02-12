@@ -4,7 +4,7 @@ const Stripe = require("stripe").default;
 const router = express.Router();
 
 // 🔍 TEMP DEBUG (keep for now)
-console.log("Stripe key in route:", process.env.STRIPE_SECRET_KEY);
+//console.log("Stripe key in route:", process.env.STRIPE_SECRET_KEY);
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
