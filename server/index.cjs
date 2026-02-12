@@ -8,6 +8,13 @@ const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const OpenAI = require("openai");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const path = require("path");
+
+app.use(express.static(path.join(__dirname, "../dist")));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../dist/index.html"));
+});
 
 // 1️⃣ LOAD .env FIRST (VERY IMPORTANT)
 const envPath = path.join(__dirname, ".env");
