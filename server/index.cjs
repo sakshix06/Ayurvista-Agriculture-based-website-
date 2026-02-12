@@ -8,7 +8,6 @@ const jwt = require("jsonwebtoken");
 const fs = require("fs");
 const OpenAI = require("openai");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const path = require("path");
 
 app.use(express.static(path.join(__dirname, "../dist")));
 
