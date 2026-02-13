@@ -8,8 +8,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
+const API_BASE = "https://ayurvista-agriculture-based-website.onrender.com";
+
 interface CartItem {
-  id: number | string;   // ✅ FIX
+  id: number | string;
   quantity: number;
 }
 
@@ -27,7 +29,6 @@ const products: Product[] = [
   { id: 4, name: "Set of 4 Summer Special Plants (2 Jasmine + 2 Aloe Vera)", price: 993, image: "/lovable-uploads/b3353135-a7cc-4a7f-861d-ffbce405151c.png" }
 ];
 
-// ✅ ORDER ID
 const generateOrderId = () =>
   "ORD-" + Date.now() + "-" + Math.floor(Math.random() * 10000);
 
@@ -48,7 +49,6 @@ const Checkout = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // ✅ CLEAN CART ON LOAD
   useEffect(() => {
     const saved = localStorage.getItem("shop_cart");
     if (!saved) return;
@@ -66,7 +66,6 @@ const Checkout = () => {
     localStorage.setItem("shop_cart", JSON.stringify(cleaned));
   }, []);
 
-  // ✅ SAFE CART PRODUCTS
   const getCartProducts = () =>
     cartItems
       .map((item) => {
@@ -86,23 +85,19 @@ const Checkout = () => {
 
   const getShippingCost = () => (getSubtotal() > 500 ? 0 : 50);
 
-  const getTotal = () => {
-    const total = getSubtotal() + getShippingCost();
-    return isNaN(total) ? 0 : total;   // 🔒 FINAL GUARD
-  };
+  const getTotal = () => getSubtotal() + getShippingCost();
 
-  // ✅ REMOVE ITEM
   const removeItem = (id: number) => {
     const updated = cartItems.filter((i) => Number(i.id) !== id);
     setCartItems(updated);
     localStorage.setItem("shop_cart", JSON.stringify(updated));
   };
 
-  // ✅ COD ORDER
+  // ✅ COD
   const placeOrderAndSendMail = async () => {
     const orderId = generateOrderId();
 
-    await fetch("http://localhost:5000/api/order/place-order", {
+    await fetch(`${API_BASE}/api/order/place-order`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -132,7 +127,7 @@ const Checkout = () => {
       JSON.stringify({ orderId, ...formData, total: getTotal() })
     );
 
-    const res = await fetch("http://localhost:5000/api/stripe/create-checkout-session", {
+    const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -160,9 +155,7 @@ const Checkout = () => {
   return (
     <div className="min-h-screen">
       <GlobalNavigation />
-
       <div className="pt-24 container mx-auto grid lg:grid-cols-2 gap-8">
-        {/* LEFT */}
         <div className="space-y-6">
           <Card>
             <CardHeader><CardTitle>Contact</CardTitle></CardHeader>
@@ -198,7 +191,6 @@ const Checkout = () => {
           </Card>
         </div>
 
-        {/* RIGHT */}
         <div className="space-y-4">
           {getCartProducts().map((p) => (
             <div key={p.id} className="flex justify-between items-center">
