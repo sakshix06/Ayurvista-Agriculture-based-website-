@@ -25,11 +25,11 @@ mongoose.connect(process.env.MONGODB_URI)
   .catch(err => console.log(err));
 
 // START SERVER (ONLY ONE TIME)
-const PORT = process.env.PORT || 10000;
+// const PORT = process.env.PORT || 10000;
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
+// app.listen(PORT, () => {
+//   console.log(`🚀 Server running on port ${PORT}`);
+// });
 
 // Bookmark Schema
 const bookmarkSchema = new mongoose.Schema(
@@ -1081,4 +1081,53 @@ Important:
 //   console.log(`🚀 Server running on port ${PORT}`);
 // });
 // ;
+
+// ================= STRIPE API =================
+
+const Stripe = require("stripe");
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+app.post("/api/stripe/create-checkout-session", async (req, res) => {
+  try {
+    const { items } = req.body;
+
+    if (!items || !items.length) {
+      return res.status(400).json({ message: "No items provided" });
+    }
+
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: items.map(item => ({
+        price_data: {
+          currency: "inr",
+          product_data: {
+            name: item.name,
+          },
+          unit_amount: item.price * 100,
+        },
+        quantity: item.quantity,
+      })),
+      success_url: "http://localhost:5173/success",
+      cancel_url: "http://localhost:5173/cancel",
+    });
+
+    res.json({ url: session.url });
+
+  } catch (error) {
+    console.error("Stripe error:", error);
+    res.status(500).json({ message: "Stripe session failed" });
+  }
+});
+
+
+// ================= START SERVER =================
+
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
+
 
