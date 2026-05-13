@@ -1,108 +1,302 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import "./virtual-tour.css";
+import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { plants } from "@/data/plants";
+import { Button } from "@/components/ui/button";
 
-const scenes = [
-  { id: 1, image: "/lovable-uploads/forest1.png", text: ["Pause.", "Breathe."] },
-  { id: 2, image: "/lovable-uploads/forest2.png", text: ["Tulsi — Guardian of Breath", "Neem — Purifier"] },
-  { id: 3, image: "/lovable-uploads/forest3.png", text: ["Healing existed", "before language."] },
-  { id: 4, image: "/lovable-uploads/forest4.png", text: ["Nature heals", "in cycles."] },
-  { id: 5, image: "/lovable-uploads/forest5.png", text: ["The journey continues."] }
-];
+const bookLinks: Record<string, { name: string; link: string }> = {
+  Giloy: {
+    name: "Medicinal Plants of India",
+    link: "https://books.google.com/",
+  },
+
+  Amla: {
+    name: "Ayurvedic Healing",
+    link: "https://books.google.com/",
+  },
+
+  Turmeric: {
+    name: "Healing Spices",
+    link: "https://books.google.com/",
+  },
+
+  Neem: {
+    name: "Neem: Nature’s Healing Gift",
+    link: "https://books.google.com/",
+  },
+
+  Tulsi: {
+    name: "Holy Basil Guide",
+    link: "https://books.google.com/",
+  },
+
+  Mint: {
+    name: "Herbal Remedies Handbook",
+    link: "https://books.google.com/",
+  },
+
+  "Aloe Vera": {
+    name: "Aloe Vera Healing",
+    link: "https://books.google.com/",
+  },
+
+  Brahmi: {
+    name: "Ayurveda and Brain Health",
+    link: "https://books.google.com/",
+  },
+
+  Ashwagandha: {
+    name: "Adaptogenic Herbs",
+    link: "https://books.google.com/",
+  },
+
+  Moringa: {
+    name: "The Miracle Tree",
+    link: "https://books.google.com/",
+  },
+
+  "Holy Basil": {
+    name: "Holy Basil Medicinal Guide",
+    link: "https://books.google.com/",
+  },
+};
 
 const VirtualTour = () => {
-  const location = useLocation();
-
-  // 🚫 HARD BLOCK — if not on /virtual-tour, render NOTHING
-  if (location.pathname !== "/virtual-tour") {
-    return null;
-  }
-
-  const [sceneIndex, setSceneIndex] = useState(0);
-  const [started, setStarted] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const { plantId } = useParams();
   const navigate = useNavigate();
 
-  // Body class ONLY when tour is active
+  const [reminder, setReminder] = useState("");
+  const [time, setTime] = useState("");
+  const [savedReminders, setSavedReminders] = useState<any[]>([]);
+
+  const plant = plants.find(
+    (p) => p.id === Number(plantId)
+  );
+
+  /* LOAD SAVED REMINDERS */
   useEffect(() => {
-    document.body.classList.add("vt-active");
-    return () => {
-      document.body.classList.remove("vt-active");
-    };
+    const stored = JSON.parse(
+      localStorage.getItem("herbal_reminders") || "[]"
+    );
+
+    setSavedReminders(
+      stored.filter(
+        (item: any) => item.plantId === Number(plantId)
+      )
+    );
+  }, [plantId]);
+
+  /* ASK NOTIFICATION PERMISSION */
+  useEffect(() => {
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
   }, []);
 
-  // Scene auto-play
+  /* CHECK REMINDER TIME */
   useEffect(() => {
-    if (!started) return;
-    if (sceneIndex < scenes.length - 1) {
-      const timer = setTimeout(() => {
-        setSceneIndex((prev) => prev + 1);
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [sceneIndex, started]);
+    const interval = setInterval(() => {
+      const now = new Date();
 
-  const startJourney = () => {
-    setStarted(true);
-    audioRef.current?.play();
+      const currentTime =
+        now.getHours().toString().padStart(2, "0") +
+        ":" +
+        now.getMinutes().toString().padStart(2, "0");
+
+      savedReminders.forEach((item) => {
+        if (item.time === currentTime) {
+
+          if (Notification.permission === "granted") {
+            new Notification("🌿 Herbal Reminder", {
+              body: `Time for: ${item.reminder}`,
+            });
+          }
+        }
+      });
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [savedReminders]);
+
+  /* DELETE REMINDER */
+  const deleteReminder = (indexToDelete: number) => {
+    const existing = JSON.parse(
+      localStorage.getItem("herbal_reminders") || "[]"
+    );
+
+    const updated = existing.filter(
+      (_: any, index: number) => index !== indexToDelete
+    );
+
+    localStorage.setItem(
+      "herbal_reminders",
+      JSON.stringify(updated)
+    );
+
+    setSavedReminders(
+      updated.filter(
+        (item: any) => item.plantId === Number(plantId)
+      )
+    );
   };
 
+  /* SAVE REMINDER */
+  const saveReminder = () => {
+    if (!reminder || !time) return;
+
+    const newReminder = {
+      plantId: Number(plantId),
+      plantName: plant?.name,
+      reminder,
+      time,
+    };
+
+    const existing = JSON.parse(
+      localStorage.getItem("herbal_reminders") || "[]"
+    );
+
+    const updated = [...existing, newReminder];
+
+    localStorage.setItem(
+      "herbal_reminders",
+      JSON.stringify(updated)
+    );
+
+    setSavedReminders(
+      updated.filter(
+        (item: any) => item.plantId === Number(plantId)
+      )
+    );
+
+    setReminder("");
+    setTime("");
+  };
+
+  if (!plant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-3xl">
+        Plant not found
+      </div>
+    );
+  }
+
+  const book = bookLinks[plant.name];
+
   return (
-    <div className="vt-wrapper">
-      <audio ref={audioRef} src="/audio/welcome.mp3" preload="auto" />
+    <div
+      className="min-h-screen flex items-center justify-center px-4 py-10"
+      style={{
+        background: "#ABC8A2",
+      }}
+    >
+<div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 md:p-7">
 
-      {!started && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black text-white z-50">
-          <h1 className="text-4xl mb-6 font-light scene-text">
-            Welcome to Ayurvista
-          </h1>
-          <button
-            onClick={startJourney}
-            className="px-8 py-3 border border-white/60 hover:bg-white hover:text-black transition"
+        {/* IMAGE */}
+        <img
+          src={plant.image}
+          alt={plant.name}
+        className="w-full h-56 object-cover rounded-2xl mb-5"
+        />
+
+        {/* TITLE */}
+        <h1 className="text-3xl font-bold text-center mb-3 text-green-900">
+          {plant.name}
+        </h1>
+
+        {/* DESCRIPTION */}
+        <p className="text-gray-700 text-lg leading-8 text-center mb-8">
+          {plant.description}
+        </p>
+
+        {/* BUTTONS */}
+        <div className="flex flex-col gap-4">
+
+          {/* REMINDER SECTION */}
+          <div className="bg-green-50 rounded-2xl p-5 border">
+            <h2 className="text-2xl font-semibold mb-4 text-green-900">
+              Herbal Reminder
+            </h2>
+
+            <input
+              type="text"
+              placeholder="e.g. Drink Tulsi Tea"
+              value={reminder}
+              onChange={(e) => setReminder(e.target.value)}
+              className="w-full border rounded-lg px-4 py-3 mb-4"
+            />
+
+            <input
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className="w-full border rounded-lg px-4 py-3 mb-4"
+            />
+
+            <Button
+              className="w-full bg-green-700 hover:bg-green-800"
+              onClick={saveReminder}
+            >
+              Save Reminder
+            </Button>
+          </div>
+
+          {/* SAVED REMINDERS */}
+          {savedReminders.length > 0 && (
+            <div className="bg-gray-50 rounded-2xl p-5 border">
+              <h2 className="text-2xl font-semibold mb-4 text-green-900">
+                Saved Reminders
+              </h2>
+
+              <div className="space-y-3">
+                {savedReminders.map((item, index) => (
+                  <div
+                    key={index}
+                    className="bg-white border rounded-xl p-4 flex justify-between items-center"
+                  >
+                    <div>
+                      <p className="font-medium">
+                        🌿 {item.reminder}
+                      </p>
+
+                      <p className="text-gray-600">
+                        ⏰ {item.time}
+                      </p>
+                    </div>
+
+                    <Button
+                      variant="destructive"
+                      onClick={() => deleteReminder(index)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* BOOK BUTTON */}
+          {book && (
+            <Button
+              variant="outline"
+              className="py-6 text-lg"
+              onClick={() =>
+                window.open(book.link, "_blank")
+              }
+            >
+              📚 {book.name}
+            </Button>
+          )}
+
+          {/* BACK BUTTON */}
+          <Button
+            variant="secondary"
+            className="py-6 text-lg"
+            onClick={() => navigate("/bookmarks")}
           >
-            Start Journey
-          </button>
+            ← Back to Bookmarks
+          </Button>
         </div>
-      )}
-
-      {started && (
-        <>
-          <img
-            src={scenes[sceneIndex].image}
-            className="absolute inset-0 w-full h-full object-cover scene-fade vt-zoom"
-            alt="scene"
-          />
-
-          <div className="absolute inset-0 bg-black/40" />
-
-          <div className="vt-leaves">
-            {[...Array(8)].map((_, i) => (
-              <span key={i} className="leaf" />
-            ))}
-          </div>
-
-          <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-6">
-            {scenes[sceneIndex].text.map((line, i) => (
-              <h1
-                key={i}
-                className="text-3xl md:text-5xl font-light scene-text"
-                style={{ animationDelay: `${i * 1.5}s` }}
-              >
-                {line}
-              </h1>
-            ))}
-
-            {sceneIndex === scenes.length - 1 && (
-              <button
-                onClick={() => navigate("/")}
-                className="mt-10 px-6 py-3 border border-white/60 hover:bg-white hover:text-black transition"
-              >
-                Exit Journey
-              </button>
-            )}
-          </div>
-        </>
-      )}
+      </div>
     </div>
   );
 };

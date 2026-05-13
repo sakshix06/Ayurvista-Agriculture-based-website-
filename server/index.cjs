@@ -1,5 +1,5 @@
 // load env first
-require("dotenv").config();
+require("dotenv").config({ path: "./server/.env" });
 
 const express = require("express");
 const mongoose = require("mongoose");
@@ -1082,44 +1082,54 @@ Important:
 // });
 // ;
 
-// ================= STRIPE API =================
+// ================= RAZORPAY API =================
 
-const Stripe = require("stripe");
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const Razorpay = require("razorpay");
 
-app.post("/api/stripe/create-checkout-session", async (req, res) => {
+console.log("ENV CHECK:", process.env.RAZORPAY_KEY_ID);
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+app.post("/api/razorpay/create-order", async (req, res) => {
   try {
     const { items } = req.body;
 
     if (!items || !items.length) {
-      return res.status(400).json({ message: "No items provided" });
+      return res.status(400).json({
+        message: "No items provided",
+      });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
-      mode: "payment",
-      line_items: items.map(item => ({
-        price_data: {
-          currency: "inr",
-          product_data: {
-            name: item.name,
-          },
-          unit_amount: item.price * 100,
-        },
-        quantity: item.quantity,
-      })),
-      success_url: "http://localhost:5173/success",
-      cancel_url: "http://localhost:5173/cancel",
+    // calculate total amount
+    const totalAmount = items.reduce((total, item) => {
+      return total + item.price * item.quantity;
+    }, 0);
+
+    const options = {
+      amount: totalAmount * 100, // Razorpay uses paise
+      currency: "INR",
+      receipt: `receipt_${Date.now()}`,
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.json({
+      success: true,
+      order,
     });
 
-    res.json({ url: session.url });
-
   } catch (error) {
-    console.error("Stripe error:", error);
-    res.status(500).json({ message: "Stripe session failed" });
+    console.error("Razorpay error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Razorpay order creation failed",
+    });
   }
 });
-
 
 // ================= START SERVER =================
 

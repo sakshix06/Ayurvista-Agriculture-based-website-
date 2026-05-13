@@ -8,7 +8,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-const API_BASE = "https://ayurvista-agriculture-based-website.onrender.com";
+//const API_BASE = "https://ayurvista-agriculture-based-website.onrender.com";
+const API_BASE = "http://localhost:5000";
 
 interface CartItem {
   id: number | string;
@@ -23,10 +24,30 @@ interface Product {
 }
 
 const products: Product[] = [
-  { id: 1, name: "Air Purifier Money Plant with pot", price: 249, image: "/lovable-uploads/101fe8a0-5dc6-4ded-a05b-a887722a629d.png" },
-  { id: 2, name: "Top 4 Jasmine Flowering Plants for Fragrance", price: 1205, image: "/lovable-uploads/124c9240-d734-40d5-aaad-699471ad9889.png" },
-  { id: 3, name: "Peace Lily, Spathiphyllum - Plant", price: 169, image: "/lovable-uploads/57676f3f-fcca-4be2-83f5-99907f0f3068.png" },
-  { id: 4, name: "Set of 4 Summer Special Plants (2 Jasmine + 2 Aloe Vera)", price: 993, image: "/lovable-uploads/b3353135-a7cc-4a7f-861d-ffbce405151c.png" }
+  {
+    id: 1,
+    name: "Air Purifier Money Plant with pot",
+    price: 249,
+    image: "/lovable-uploads/101fe8a0-5dc6-4ded-a05b-a887722a629d.png"
+  },
+  {
+    id: 2,
+    name: "Top 4 Jasmine Flowering Plants for Fragrance",
+    price: 1205,
+    image: "/lovable-uploads/124c9240-d734-40d5-aaad-699471ad9889.png"
+  },
+  {
+    id: 3,
+    name: "Peace Lily, Spathiphyllum - Plant",
+    price: 169,
+    image: "/lovable-uploads/57676f3f-fcca-4be2-83f5-99907f0f3068.png"
+  },
+  {
+    id: 4,
+    name: "Set of 4 Summer Special Plants (2 Jasmine + 2 Aloe Vera)",
+    price: 993,
+    image: "/lovable-uploads/b3353135-a7cc-4a7f-861d-ffbce405151c.png"
+  }
 ];
 
 const generateOrderId = () =>
@@ -93,7 +114,7 @@ const Checkout = () => {
     localStorage.setItem("shop_cart", JSON.stringify(updated));
   };
 
-  // ✅ COD
+  // COD ORDER
   const placeOrderAndSendMail = async () => {
     const orderId = generateOrderId();
 
@@ -113,78 +134,231 @@ const Checkout = () => {
       }),
     });
 
-    toast({ title: "Order Confirmed", description: `Order ID: ${orderId}` });
+    toast({
+      title: "Order Confirmed",
+      description: `Order ID: ${orderId}`,
+    });
+
     localStorage.removeItem("shop_cart");
+
     navigate("/shop");
   };
 
-  // ✅ STRIPE
-  const redirectToStripe = async () => {
-    const orderId = generateOrderId();
+  // RAZORPAY
+  const redirectToRazorpay = async () => {
+    try {
+      const orderId = generateOrderId();
 
-    localStorage.setItem(
-      "pending_order",
-      JSON.stringify({ orderId, ...formData, total: getTotal() })
-    );
+      localStorage.setItem(
+        "pending_order",
+        JSON.stringify({
+          orderId,
+          ...formData,
+          total: getTotal(),
+        })
+      );
 
-    const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        items: getCartProducts().map((p) => ({
-          name: p.name,
-          price: p.price,
-          quantity: p.quantity,
-        })),
-      }),
-    });
+      const res = await fetch(`${API_BASE}/api/razorpay/create-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          items: getCartProducts().map((p) => ({
+            name: p.name,
+            price: p.price,
+            quantity: p.quantity,
+          })),
+        }),
+      });
 
-    const data = await res.json();
-    window.location.href = data.url;
+      const data = await res.json();
+
+      if (!data.success) {
+        toast({
+          title: "Payment Failed",
+          description: "Unable to create Razorpay order",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const options = {
+        key: "rzp_test_SojH2k24fHZ6zb",
+        amount: data.order.amount,
+        currency: data.order.currency,
+        name: "AyurVista",
+        description: "Plant Purchase",
+        order_id: data.order.id,
+
+        handler: async function () {
+          await placeOrderAndSendMail();
+
+          toast({
+            title: "Payment Successful",
+            description: "Your order has been placed",
+          });
+        },
+
+        prefill: {
+          name: formData.fullName,
+          email: formData.email,
+          contact: formData.phone,
+        },
+
+        theme: {
+          color: "#16a34a",
+        },
+      };
+
+      const razor = new (window as any).Razorpay(options);
+
+      razor.open();
+
+    } catch (error) {
+      console.error(error);
+
+      toast({
+        title: "Payment Error",
+        description: "Something went wrong",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePlaceOrder = () => {
-    if (!formData.fullName || !formData.email || !formData.phone || !formData.address) {
-      toast({ title: "Fill all fields", variant: "destructive" });
+    if (
+      !formData.fullName ||
+      !formData.email ||
+      !formData.phone ||
+      !formData.address
+    ) {
+      toast({
+        title: "Fill all fields",
+        variant: "destructive",
+      });
+
       return;
     }
 
-    paymentMethod === "upi" ? redirectToStripe() : placeOrderAndSendMail();
+    paymentMethod === "upi"
+      ? redirectToRazorpay()
+      : placeOrderAndSendMail();
   };
 
   return (
     <div className="min-h-screen">
       <GlobalNavigation />
+
       <div className="pt-24 container mx-auto grid lg:grid-cols-2 gap-8">
         <div className="space-y-6">
+
           <Card>
-            <CardHeader><CardTitle>Contact</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Contact</CardTitle>
+            </CardHeader>
+
             <CardContent className="space-y-3">
-              <Input placeholder="Name" onChange={(e)=>setFormData({...formData,fullName:e.target.value})}/>
-              <Input placeholder="Email" onChange={(e)=>setFormData({...formData,email:e.target.value})}/>
-              <Input placeholder="Phone" onChange={(e)=>setFormData({...formData,phone:e.target.value})}/>
+              <Input
+                placeholder="Name"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    fullName: e.target.value
+                  })
+                }
+              />
+
+              <Input
+                placeholder="Email"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    email: e.target.value
+                  })
+                }
+              />
+
+              <Input
+                placeholder="Phone"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    phone: e.target.value
+                  })
+                }
+              />
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Address</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Address</CardTitle>
+            </CardHeader>
+
             <CardContent className="space-y-3">
-              <Textarea placeholder="Address" onChange={(e)=>setFormData({...formData,address:e.target.value})}/>
-              <Input placeholder="City" onChange={(e)=>setFormData({...formData,city:e.target.value})}/>
-              <Input placeholder="State" onChange={(e)=>setFormData({...formData,state:e.target.value})}/>
-              <Input placeholder="Pincode" onChange={(e)=>setFormData({...formData,pincode:e.target.value})}/>
+              <Textarea
+                placeholder="Address"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    address: e.target.value
+                  })
+                }
+              />
+
+              <Input
+                placeholder="City"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    city: e.target.value
+                  })
+                }
+              />
+
+              <Input
+                placeholder="State"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    state: e.target.value
+                  })
+                }
+              />
+
+              <Input
+                placeholder="Pincode"
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    pincode: e.target.value
+                  })
+                }
+              />
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Payment</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Payment</CardTitle>
+            </CardHeader>
+
             <CardContent>
-              <RadioGroup value={paymentMethod} onValueChange={(v)=>setPaymentMethod(v as any)}>
+              <RadioGroup
+                value={paymentMethod}
+                onValueChange={(v) =>
+                  setPaymentMethod(v as any)
+                }
+              >
                 <div className="flex gap-2 items-center">
-                  <RadioGroupItem value="cod" /> COD
+                  <RadioGroupItem value="cod" />
+                  COD
                 </div>
+
                 <div className="flex gap-2 items-center">
-                  <RadioGroupItem value="upi" /> UPI (Stripe Test)
+                  <RadioGroupItem value="upi" />
+                  UPI (Razorpay Test)
                 </div>
               </RadioGroup>
             </CardContent>
@@ -193,20 +367,37 @@ const Checkout = () => {
 
         <div className="space-y-4">
           {getCartProducts().map((p) => (
-            <div key={p.id} className="flex justify-between items-center">
-              <span>{p.name} × {p.quantity}</span>
-              <Button variant="destructive" onClick={() => removeItem(p.id)}>
+            <div
+              key={p.id}
+              className="flex justify-between items-center"
+            >
+              <span>
+                {p.name} × {p.quantity}
+              </span>
+
+              <Button
+                variant="destructive"
+                onClick={() => removeItem(p.id)}
+              >
                 Remove
               </Button>
             </div>
           ))}
 
           <Card>
-            <CardHeader><CardTitle>Total</CardTitle></CardHeader>
-            <CardContent>₹{getTotal()}</CardContent>
+            <CardHeader>
+              <CardTitle>Total</CardTitle>
+            </CardHeader>
+
+            <CardContent>
+              ₹{getTotal()}
+            </CardContent>
           </Card>
 
-          <Button className="w-full bg-green-600 text-lg" onClick={handlePlaceOrder}>
+          <Button
+            className="w-full bg-green-600 text-lg"
+            onClick={handlePlaceOrder}
+          >
             Place Order
           </Button>
         </div>

@@ -96,7 +96,14 @@ const App = () => {
             <Route path="/explore" element={<ProtectedRoute><Explore /></ProtectedRoute>} />
             <Route path="/bookmarks" element={<ProtectedRoute><Bookmarks /></ProtectedRoute>} />
             <Route path="/plant/:plantId" element={<ProtectedRoute><PlantDetail /></ProtectedRoute>} />
-            <Route path="/virtual-tour" element={<ProtectedRoute><VirtualTour /></ProtectedRoute>} />
+     <Route
+  path="/virtual-tour/:plantId"
+  element={
+    <ProtectedRoute>
+      <VirtualTour />
+    </ProtectedRoute>
+  }
+/>
             <Route path="/virtual-garden" element={<ProtectedRoute><VirtualGarden /></ProtectedRoute>} />
             <Route path="/immunity-booster" element={<ProtectedRoute><ImmunityBooster /></ProtectedRoute>} />
             <Route path="/skincare" element={<ProtectedRoute><Skincare /></ProtectedRoute>} />
