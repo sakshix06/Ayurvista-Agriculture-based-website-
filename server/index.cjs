@@ -1081,63 +1081,69 @@ Important:
 //   console.log(`🚀 Server running on port ${PORT}`);
 // });
 // ;
-
 // ================= RAZORPAY API =================
 
 const Razorpay = require("razorpay");
 
-console.log("ENV CHECK:", process.env.RAZORPAY_KEY_ID);
+// ENV CHECK
+console.log("RAZORPAY_KEY_ID:", process.env.RAZORPAY_KEY_ID);
+console.log("RAZORPAY_KEY_SECRET:", process.env.RAZORPAY_KEY_SECRET);
 
+// Razorpay Instance
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_id: process.env.RAZORPAY_KEY_ID?.trim(),
+  key_secret: process.env.RAZORPAY_KEY_SECRET?.trim(),
 });
 
+// CREATE ORDER
 app.post("/api/razorpay/create-order", async (req, res) => {
   try {
     const { items } = req.body;
 
-    if (!items || !items.length) {
+    // Validation
+    if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({
+        success: false,
         message: "No items provided",
       });
     }
 
-    // calculate total amount
+    // Total Amount Calculation
     const totalAmount = items.reduce((total, item) => {
-      return total + item.price * item.quantity;
+      return total + Number(item.price) * Number(item.quantity);
     }, 0);
 
+    // Razorpay Order Options
     const options = {
-      amount: totalAmount * 100, // Razorpay uses paise
+      amount: Math.round(totalAmount * 100), // convert to paise
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     };
 
+    // Create Order
     const order = await razorpay.orders.create(options);
 
-    res.json({
+    // Success Response
+    res.status(200).json({
       success: true,
       order,
     });
 
   } catch (error) {
-    console.error("Razorpay error:", error);
+    console.error("Razorpay Error:", error);
 
     res.status(500).json({
       success: false,
-      message: "Razorpay order creation failed",
+      message: "Failed to create Razorpay order",
+      error: error.message,
     });
   }
 });
 
 // ================= START SERVER =================
 
-
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
-
-
