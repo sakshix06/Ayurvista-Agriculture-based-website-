@@ -94,7 +94,9 @@ const VirtualTour = () => {
 
   /* CHECK REMINDER TIME */
   useEffect(() => {
-    const interval = setInterval(() => {
+
+    const checkReminders = () => {
+
       const now = new Date();
 
       const currentTime =
@@ -103,28 +105,57 @@ const VirtualTour = () => {
         now.getMinutes().toString().padStart(2, "0");
 
       savedReminders.forEach((item) => {
-        if (item.time === currentTime) {
+
+        const notifiedKey = `${item.reminder}-${item.time}-${now.toDateString()}`;
+
+        if (
+          item.time === currentTime &&
+          !localStorage.getItem(notifiedKey)
+        ) {
 
           if (Notification.permission === "granted") {
+
             new Notification("🌿 Herbal Reminder", {
               body: `Time for: ${item.reminder}`,
+              icon: plant?.image,
             });
+
+            localStorage.setItem(notifiedKey, "true");
           }
         }
       });
-    }, 60000);
+    };
+
+    // CHECK IMMEDIATELY
+    checkReminders();
+
+    // CHECK EVERY 10 SECONDS
+    const interval = setInterval(checkReminders, 10000);
 
     return () => clearInterval(interval);
-  }, [savedReminders]);
+
+  }, [savedReminders, plant]);
 
   /* DELETE REMINDER */
   const deleteReminder = (indexToDelete: number) => {
+
     const existing = JSON.parse(
       localStorage.getItem("herbal_reminders") || "[]"
     );
 
+    const plantReminders = existing.filter(
+      (item: any) => item.plantId === Number(plantId)
+    );
+
+    const reminderToDelete = plantReminders[indexToDelete];
+
     const updated = existing.filter(
-      (_: any, index: number) => index !== indexToDelete
+      (item: any) =>
+        !(
+          item.plantId === reminderToDelete.plantId &&
+          item.reminder === reminderToDelete.reminder &&
+          item.time === reminderToDelete.time
+        )
     );
 
     localStorage.setItem(
@@ -140,8 +171,20 @@ const VirtualTour = () => {
   };
 
   /* SAVE REMINDER */
-  const saveReminder = () => {
+  const saveReminder = async () => {
+
     if (!reminder || !time) return;
+
+    if ("Notification" in window) {
+
+      const permission =
+        await Notification.requestPermission();
+
+      if (permission !== "granted") {
+        alert("Please allow notifications");
+        return;
+      }
+    }
 
     const newReminder = {
       plantId: Number(plantId),
@@ -167,6 +210,15 @@ const VirtualTour = () => {
       )
     );
 
+    // SUCCESS NOTIFICATION
+    if (Notification.permission === "granted") {
+
+      new Notification("✅ Reminder Saved", {
+        body: `${reminder} at ${time}`,
+        icon: plant?.image,
+      });
+    }
+
     setReminder("");
     setTime("");
   };
@@ -188,13 +240,13 @@ const VirtualTour = () => {
         background: "#ABC8A2",
       }}
     >
-<div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 md:p-7">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-6 md:p-7">
 
         {/* IMAGE */}
         <img
           src={plant.image}
           alt={plant.name}
-        className="w-full h-56 object-cover rounded-2xl mb-5"
+          className="w-full h-56 object-cover rounded-2xl mb-5"
         />
 
         {/* TITLE */}
