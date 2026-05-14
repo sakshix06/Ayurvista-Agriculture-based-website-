@@ -1083,39 +1083,36 @@ Important:
 // ;
 // ================= RAZORPAY API =================
 
-const Razorpay = require("razorpay");
-
-// ENV CHECK
-console.log("RAZORPAY_KEY_ID:", process.env.RAZORPAY_KEY_ID);
-console.log("RAZORPAY_KEY_SECRET:", process.env.RAZORPAY_KEY_SECRET);
-
-// Razorpay Instance
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID?.trim(),
-  key_secret: process.env.RAZORPAY_KEY_SECRET?.trim(),
-});
-
-// CREATE ORDER
 app.post("/api/razorpay/create-order", async (req, res) => {
   try {
+
+    // Razorpay Import
+    const Razorpay = require("razorpay");
+
+    // Razorpay Instance
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+
     const { items } = req.body;
 
     // Validation
-    if (!items || !Array.isArray(items) || items.length === 0) {
+    if (!items || !items.length) {
       return res.status(400).json({
         success: false,
         message: "No items provided",
       });
     }
 
-    // Total Amount Calculation
+    // Total Calculation
     const totalAmount = items.reduce((total, item) => {
-      return total + Number(item.price) * Number(item.quantity);
+      return total + item.price * item.quantity;
     }, 0);
 
-    // Razorpay Order Options
+    // Order Options
     const options = {
-      amount: Math.round(totalAmount * 100), // convert to paise
+      amount: totalAmount * 100,
       currency: "INR",
       receipt: `receipt_${Date.now()}`,
     };
@@ -1123,19 +1120,18 @@ app.post("/api/razorpay/create-order", async (req, res) => {
     // Create Order
     const order = await razorpay.orders.create(options);
 
-    // Success Response
-    res.status(200).json({
+    res.json({
       success: true,
       order,
     });
 
   } catch (error) {
+
     console.error("Razorpay Error:", error);
 
     res.status(500).json({
       success: false,
-      message: "Failed to create Razorpay order",
-      error: error.message,
+      message: "Razorpay order creation failed",
     });
   }
 });
