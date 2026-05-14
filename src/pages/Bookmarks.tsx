@@ -1,4 +1,3 @@
-
 import GlobalNavigation from "@/components/GlobalNavigation";
 import { Card } from "@/components/ui/card";
 import { Bookmark, X } from "lucide-react";
@@ -12,35 +11,73 @@ const Bookmarks = () => {
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const { t } = useI18n();
 
+  // Notification Permission
+  useEffect(() => {
+    if ("Notification" in window) {
+      Notification.requestPermission();
+    }
+  }, []);
+
   useEffect(() => {
     setBookmarks(getBookmarks());
+
     const onStorage = () => setBookmarks(getBookmarks());
+
     window.addEventListener("storage", onStorage);
+
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   const handleUnbookmark = (plantId: number) => {
     toggleBookmark(plantId);
+
     setBookmarks(getBookmarks());
+
+    // Notification
+    if (Notification.permission === "granted") {
+      new Notification("🌿 Bookmark Removed", {
+        body: "Plant removed from bookmarks successfully",
+      });
+    }
   };
 
-  const bookmarkedPlants = plants.filter(p => bookmarks.includes(p.id));
+  const bookmarkedPlants = plants.filter((p) =>
+    bookmarks.includes(p.id)
+  );
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#ABC8A2' }}>
+    <div
+      className="min-h-screen"
+      style={{ backgroundColor: "#ABC8A2" }}
+    >
       <GlobalNavigation />
+
       <div className="pt-24 container mx-auto px-4 pb-10">
-        <h1 className="text-3xl font-bold mb-8" style={{ color: '#1A2417' }}>{t('bookmarks.title')}</h1>
+        <h1
+          className="text-3xl font-bold mb-8"
+          style={{ color: "#1A2417" }}
+        >
+          {t("bookmarks.title")}
+        </h1>
+
         {bookmarkedPlants.length === 0 ? (
-          <p className="text-gray-500">{t('bookmarks.empty')}</p>
+          <p className="text-gray-500">
+            {t("bookmarks.empty")}
+          </p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
             {bookmarkedPlants.map((plant) => (
-              <div key={plant.id} className="relative group">
+              <div
+                key={plant.id}
+                className="relative group"
+              >
                 <Link to={`/virtual-tour/${plant.id}`}>
                   <div
-                    className={`relative group rounded-xl hover:scale-105 transition-all cursor-pointer shadow-lg`}
-                    style={{ minHeight: 250, backgroundColor: '#1A2417' }}
+                    className="relative group rounded-xl hover:scale-105 transition-all cursor-pointer shadow-lg"
+                    style={{
+                      minHeight: 250,
+                      backgroundColor: "#1A2417",
+                    }}
                   >
                     <div className="flex items-center justify-center h-32 sm:h-36 mt-4 sm:mt-6 mb-2">
                       <img
@@ -50,23 +87,28 @@ const Bookmarks = () => {
                         style={{ background: "white" }}
                       />
                     </div>
+
                     <div className="flex flex-col justify-end h-16 sm:h-16 pb-3">
                       <span className="block text-center text-sm sm:text-base md:text-lg font-semibold text-white drop-shadow px-1">
                         {plant.name}
                       </span>
-                      <span className="block text-[10px] sm:text-[11px] text-center text-green-200 opacity-80 px-1">{t('explore.virtualTourAvailable')}</span>
+
+                      <span className="block text-[10px] sm:text-[11px] text-center text-green-200 opacity-80 px-1">
+                        {t("explore.virtualTourAvailable")}
+                      </span>
                     </div>
                   </div>
                 </Link>
-                
+
                 {/* Unbookmark Button */}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
+
                     handleUnbookmark(plant.id);
                   }}
                   className="absolute top-3 right-3 z-10 bg-red-500 hover:bg-red-600 text-white rounded-full p-1.5 shadow-lg transition-all duration-300 transform hover:scale-110"
-                  title={t('bookmarks.unbookmark')}
+                  title={t("bookmarks.unbookmark")}
                 >
                   <X size={16} />
                 </button>
@@ -80,4 +122,3 @@ const Bookmarks = () => {
 };
 
 export default Bookmarks;
-
