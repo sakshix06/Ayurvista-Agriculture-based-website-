@@ -8,8 +8,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
-//const API_BASE = "https://ayurvista-agriculture-based-website.onrender.com";
-const API_BASE = "http://localhost:5000";
+const API_BASE = "https://ayurvista-agriculture-based-website.onrender.com";
+//const API_BASE = "http://localhost:5000";
 
 interface CartItem {
   id: number | string;
