@@ -5,6 +5,10 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_ayurvista";
 
 const app = express();
 
@@ -30,6 +34,18 @@ mongoose.connect(process.env.MONGODB_URI)
 // app.listen(PORT, () => {
 //   console.log(`🚀 Server running on port ${PORT}`);
 // });
+
+// User Schema
+const userSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    passwordHash: { type: String, required: true }
+  },
+  { timestamps: true }
+);
+
+const User = mongoose.model('User', userSchema);
 
 // Bookmark Schema
 const bookmarkSchema = new mongoose.Schema(
@@ -87,59 +103,115 @@ const isMongoConnected = () => mongoose.connection.readyState === 1;
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password } = req.body || {};
-    if (!name || !email || !password) return res.status(400).json({ message: 'Missing fields' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: 'Missing name, email or password' });
+    }
     
     if (isMongoConnected()) {
       // Use MongoDB
       const existing = await User.findOne({ email });
-      if (existing) return res.status(409).json({ message: 'Email already registered' });
+      if (existing) {
+        return res.status(409).json({ message: 'Email already registered' });
+      }
+
       const passwordHash = await bcrypt.hash(password, 10);
       const user = await User.create({ name, email, passwordHash });
-      const token = jwt.sign({ sub: user._id, email }, JWT_SECRET, { expiresIn: '7d' });
-      res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+      
+      const token = jwt.sign(
+        { sub: user._id.toString(), email: user.email }, 
+        JWT_SECRET, 
+        { expiresIn: '7d' }
+      );
+      
+      return res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
     } else {
       // Use in-memory storage
       if (inMemoryStorage.users.has(email)) {
         return res.status(409).json({ message: 'Email already registered' });
       }
+
       const passwordHash = await bcrypt.hash(password, 10);
       const userId = inMemoryStorage.nextUserId++;
       const user = { id: userId, name, email, passwordHash };
+      
       inMemoryStorage.users.set(email, user);
-      const token = jwt.sign({ sub: userId, email }, JWT_SECRET, { expiresIn: '7d' });
-      res.json({ token, user: { id: userId, name: user.name, email: user.email } });
+      
+      const token = jwt.sign(
+        { sub: userId.toString(), email: user.email }, 
+        JWT_SECRET, 
+        { expiresIn: '7d' }
+      );
+      
+      return res.json({ token, user: { id: userId, name: user.name, email: user.email } });
     }
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Register Error details:', err);
+    return res.status(500).json({ message: 'Server error during registration', error: err.message });
   }
 });
 
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body || {};
-    if (!email || !password) return res.status(400).json({ message: 'Missing fields' });
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Missing email or password' });
+    }
     
     if (isMongoConnected()) {
       // Use MongoDB
       const user = await User.findOne({ email });
-      if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-      const ok = await bcrypt.compare(password, user.passwordHash);
-      if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
-      const token = jwt.sign({ sub: user._id, email }, JWT_SECRET, { expiresIn: '7d' });
-      res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials (User not found)' });
+      }
+
+      // Check which password field exists (legacy support)
+      const userPassword = user.passwordHash || user.password;
+      
+      if (!userPassword) {
+        console.error(`Login error: User ${email} has no password field in database.`);
+        return res.status(401).json({ message: 'Invalid credentials (Account error)' });
+      }
+
+      const ok = await bcrypt.compare(password, userPassword);
+      if (!ok) {
+        return res.status(401).json({ message: 'Invalid credentials (Wrong password)' });
+      }
+
+      const token = jwt.sign(
+        { sub: user._id.toString(), email: user.email }, 
+        JWT_SECRET, 
+        { expiresIn: '7d' }
+      );
+      
+      return res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
     } else {
       // Use in-memory storage
       const user = inMemoryStorage.users.get(email);
-      if (!user) return res.status(401).json({ message: 'Invalid credentials' });
-      const ok = await bcrypt.compare(password, user.passwordHash);
-      if (!ok) return res.status(401).json({ message: 'Invalid credentials' });
-      const token = jwt.sign({ sub: user.id, email }, JWT_SECRET, { expiresIn: '7d' });
-      res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+      if (!user) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      const userPassword = user.passwordHash || user.password;
+      if (!userPassword) {
+         return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      const ok = await bcrypt.compare(password, userPassword);
+      if (!ok) {
+        return res.status(401).json({ message: 'Invalid credentials' });
+      }
+
+      const token = jwt.sign(
+        { sub: user.id.toString(), email: user.email }, 
+        JWT_SECRET, 
+        { expiresIn: '7d' }
+      );
+      
+      return res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
     }
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error' });
+    console.error('Login Error details:', err);
+    return res.status(500).json({ message: 'Server error during login', error: err.message });
   }
 });
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, User, LogOut, Bookmark, UserCircle } from "lucide-react";
+import { Menu, X, User, LogOut, Bookmark, UserCircle, ChevronDown } from "lucide-react";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import Auth from "@/pages/Auth";
@@ -14,6 +14,7 @@ const GlobalNavigation = () => {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const { t, toggleLanguage, lang } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Get logged-in user name from localStorage
   const userName = localStorage.getItem("herbalgarden_username") || "User";
@@ -35,31 +36,42 @@ const GlobalNavigation = () => {
     { name: t('nav.contact'), href: "/contact" }
   ];
 
+  const isActive = (href: string) => {
+    if (href === "/") return location.pathname === "/";
+    return location.pathname.startsWith(href);
+  };
+
   return (
-    <nav className="relative shadow-lg border-b" style={{ backgroundColor: '#1A2417' }}>
+    <nav className="sticky top-0 z-50 glass-navbar shadow-2xl transition-all duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo - Left Corner */}
           <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ABC8A2' }}>
-                <span className="font-bold text-sm" style={{ color: '#1A2417' }}>A</span>
+            <Link to="/" className="flex items-center space-x-2 group">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#a8e063] shadow-[0_0_12px_rgba(168,224,99,0.4)] transition-all duration-300 group-hover:scale-105">
+                <span className="font-extrabold text-sm text-[#1A2417]">A</span>
               </div>
-              <span className="text-xl font-bold" style={{ color: '#ABC8A2' }}>Ayurvista</span>
+              <span className="text-xl font-bold tracking-tight text-white transition-all duration-300 group-hover:text-[#a8e063]">
+                Ayur<span className="text-[#a8e063]">vista</span>
+              </span>
             </Link>
           </div>
 
           {/* Desktop Navigation - Centered */}
           <div className="hidden lg:block absolute left-1/2 transform -translate-x-1/2">
-            <div className="flex items-baseline space-x-1">
+            <div className="flex items-center space-x-2">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className="px-3 py-2 rounded-full text-sm font-medium transition-colors duration-200 hover:opacity-80"
-                  style={{ color: '#ABC8A2' }}
+                  className={`relative px-3.5 py-1.5 text-xs font-bold tracking-widest transition-all duration-300 hover:text-[#a8e063] ${
+                    isActive(item.href) ? "text-[#a8e063] text-glow-green" : "text-[#ABC8A2]/80"
+                  }`}
                 >
                   {item.name}
+                  {isActive(item.href) && (
+                    <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-[#a8e063] shadow-[0_0_8px_#a8e063] animate-pulse" />
+                  )}
                 </Link>
               ))}
             </div>
@@ -67,15 +79,19 @@ const GlobalNavigation = () => {
 
           {/* Tablet Navigation - Smaller centered */}
           <div className="hidden md:block lg:hidden absolute left-1/2 transform -translate-x-1/2">
-            <div className="flex items-baseline space-x-1">
+            <div className="flex items-center space-x-1">
               {navItems.slice(0, 6).map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className="px-2 py-2 rounded-full text-xs font-medium transition-colors duration-200 hover:opacity-80"
-                  style={{ color: '#ABC8A2' }}
+                  className={`relative px-2.5 py-1.5 text-[10px] font-bold tracking-wider transition-all duration-300 hover:text-[#a8e063] ${
+                    isActive(item.href) ? "text-[#a8e063] text-glow-green" : "text-[#ABC8A2]/80"
+                  }`}
                 >
                   {item.name}
+                  {isActive(item.href) && (
+                    <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#a8e063] shadow-[0_0_6px_#a8e063]" />
+                  )}
                 </Link>
               ))}
             </div>
@@ -85,10 +101,10 @@ const GlobalNavigation = () => {
           <div className="hidden md:block">
             <div className="flex items-center gap-3">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={toggleLanguage}
-                className="px-3 py-1 text-sm rounded-lg border-gray-300"
+                className="px-4 py-1 h-8 rounded-full text-xs font-semibold border-0 bg-white/10 hover:bg-white/20 text-white transition-all duration-300 shadow-sm"
               >
                 {lang === 'en' ? 'हिन्दी' : 'English'}
               </Button>
@@ -98,32 +114,32 @@ const GlobalNavigation = () => {
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center space-x-2 px-3 py-2 rounded-full transition-colors duration-200 hover:opacity-80"
-                    style={{ backgroundColor: '#ABC8A2' }}
+                    className="flex items-center space-x-2 px-3 py-1.5 h-8 rounded-full transition-all duration-300 bg-white/10 hover:bg-white/20 border border-white/5 text-[#ABC8A2]"
                   >
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#1A2417' }}>
-                      <User className="h-4 w-4" style={{ color: '#ABC8A2' }} />
+                    <div className="w-5 h-5 rounded-full flex items-center justify-center bg-[#a8e063] shadow-md">
+                      <User className="h-3 w-3 text-[#1A2417]" />
                     </div>
-                    <span className="text-sm font-medium" style={{ color: '#1A2417' }}>{userName}</span>
+                    <span className="text-xs font-semibold text-white">{userName}</span>
+                    <ChevronDown className="h-3 w-3 text-white/60" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem asChild>
-                    <Link to="/profile" className="flex items-center space-x-2">
+                <DropdownMenuContent align="end" className="w-48 bg-zinc-950/95 border-emerald-950/40 text-[#ABC8A2] backdrop-blur-md">
+                  <DropdownMenuItem asChild className="hover:bg-emerald-950/30 hover:text-white cursor-pointer">
+                    <Link to="/profile" className="flex items-center space-x-2 w-full">
                       <UserCircle className="h-4 w-4" />
                       <span>{t('user.profile')}</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/bookmarks" className="flex items-center space-x-2">
+                  <DropdownMenuItem asChild className="hover:bg-emerald-950/30 hover:text-white cursor-pointer">
+                    <Link to="/bookmarks" className="flex items-center space-x-2 w-full">
                       <Bookmark className="h-4 w-4" />
                       <span>{t('nav.bookmarks')}</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuSeparator className="bg-emerald-950/20" />
                   <DropdownMenuItem 
                     onClick={handleLogout}
-                    className="flex items-center space-x-2 text-red-600"
+                    className="flex items-center space-x-2 text-red-400 hover:bg-red-950/20 cursor-pointer"
                   >
                     <LogOut className="h-4 w-4" />
                     <span>{t('user.logout')}</span>
@@ -139,12 +155,12 @@ const GlobalNavigation = () => {
               variant="ghost"
               size="sm"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2"
+              className="p-2 text-[#ABC8A2] hover:bg-white/10 rounded-lg"
             >
               {isMobileMenuOpen ? (
-                <X className="h-6 w-6 text-gray-600" />
+                <X className="h-6 w-6 text-white" />
               ) : (
-                <Menu className="h-6 w-6 text-gray-600" />
+                <Menu className="h-6 w-6 text-white" />
               )}
             </Button>
           </div>
@@ -152,14 +168,15 @@ const GlobalNavigation = () => {
 
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
-              <div className="md:hidden">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 shadow-lg rounded-b-lg" style={{ backgroundColor: '#1A2417' }}>
+          <div className="md:hidden">
+            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 shadow-2xl rounded-b-xl bg-[#0a150c]/95 border-t border-white/5 backdrop-blur-xl">
               {navItems.map((item) => (
                 <Link
                   key={item.name}
                   to={item.href}
-                  className="block px-3 py-2 rounded-md text-base font-medium hover:opacity-80"
-                  style={{ color: '#ABC8A2' }}
+                  className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 ${
+                    isActive(item.href) ? "bg-[#a8e063]/10 text-[#a8e063]" : "text-[#ABC8A2] hover:bg-white/5"
+                  }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   {item.name}
@@ -167,19 +184,18 @@ const GlobalNavigation = () => {
               ))}
               
               {/* Mobile User Section */}
-              <div className="px-3 py-2 border-t mt-2" style={{ borderColor: '#ABC8A2' }}>
+              <div className="px-3 py-2 border-t mt-2 border-white/5">
                 <div className="flex items-center space-x-3 mb-3">
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: '#ABC8A2' }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-[#a8e063]">
                     <User className="h-4 w-4" style={{ color: '#1A2417' }} />
                   </div>
-                  <span className="text-sm font-medium" style={{ color: '#ABC8A2' }}>{userName}</span>
+                  <span className="text-sm font-semibold text-white">{userName}</span>
                 </div>
                 
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Link
                     to="/profile"
-                    className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium hover:opacity-80"
-                    style={{ color: '#ABC8A2' }}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-white/5 text-[#ABC8A2]"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <UserCircle className="h-4 w-4" />
@@ -187,8 +203,7 @@ const GlobalNavigation = () => {
                   </Link>
                   <Link
                     to="/bookmarks"
-                    className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium hover:opacity-80"
-                    style={{ color: '#ABC8A2' }}
+                    className="flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium hover:bg-white/5 text-[#ABC8A2]"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <Bookmark className="h-4 w-4" />
@@ -202,7 +217,7 @@ const GlobalNavigation = () => {
                     variant="outline"
                     size="sm"
                     onClick={toggleLanguage}
-                    className="w-full px-3 py-1 text-sm rounded-lg border-gray-300"
+                    className="w-full px-3 py-1 text-sm rounded-lg border-white/10 bg-white/5 hover:bg-white/10 text-white"
                   >
                     {lang === 'en' ? 'हिन्दी' : 'English'}
                   </Button>
@@ -211,7 +226,7 @@ const GlobalNavigation = () => {
                 {/* Mobile Logout */}
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-2 text-red-600 hover:bg-red-50 px-3 py-2 rounded-md text-sm font-medium w-full mt-2"
+                  className="flex items-center space-x-2 text-red-400 hover:bg-red-950/20 px-3 py-2 rounded-md text-sm font-medium w-full mt-2"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>{t('user.logout')}</span>

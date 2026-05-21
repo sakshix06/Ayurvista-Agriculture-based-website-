@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MessageCircle, Send, X } from "lucide-react";
+import { Link } from "react-router-dom";
 import GlobalNavigation from "@/components/GlobalNavigation";
 
 const Dashboard = () => {
@@ -64,9 +65,11 @@ const Dashboard = () => {
                 </p>
               </div>
               
-              <Button className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors duration-200">
-                Start The Virtual Tour
-              </Button>
+              <Link to="/virtual-tour">
+                <Button className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-full text-lg font-medium transition-colors duration-200">
+                  Start The Virtual Tour
+                </Button>
+              </Link>
             </div>
 
             {/* Right Content - Plant Visuals */}
