@@ -19,9 +19,7 @@ app.use(express.json());
 // serve frontend
 app.use(express.static(path.join(__dirname, "../dist")));
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../dist/index.html"));
-});
+// (Fallback route moved to the bottom of this file)
 
 // connect mongo
 mongoose.connect(process.env.MONGODB_URI)
@@ -1206,6 +1204,12 @@ app.post("/api/razorpay/create-order", async (req, res) => {
       message: "Razorpay order creation failed",
     });
   }
+});
+
+// ================= REACT FRONTEND FALLBACK =================
+// This MUST be placed after all API routes so it doesn't intercept them
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../dist/index.html"));
 });
 
 // ================= START SERVER =================
