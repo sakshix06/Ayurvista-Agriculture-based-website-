@@ -13,6 +13,7 @@ export default function Auth({ initialMode = "login" }: { initialMode?: "login" 
   const [loading, setLoading] = useState(false);
   
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // Form states
   const [email, setEmail] = useState("");
@@ -31,7 +32,7 @@ export default function Auth({ initialMode = "login" }: { initialMode?: "login" 
     }
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/api/auth/login", {
+     const res = await fetch(`${API_URL}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -71,7 +72,7 @@ export default function Auth({ initialMode = "login" }: { initialMode?: "login" 
 
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:5000/api/auth/register", {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password }),
