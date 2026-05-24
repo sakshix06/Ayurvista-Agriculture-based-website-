@@ -213,6 +213,10 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Import and use new Auth routes for Google and Forgot Password
+const authRoutes = require("./routes/authRoutes");
+app.use('/api/auth', authRoutes);
+
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 // Middleware to verify JWT token
