@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
+import rateLimit from 'express-rate-limit';
+import { sendOtp, verifyOtp, register, login, googleLogin, sendForgotPasswordOtp, resetPassword } from '../controllers/authController.js';
+
 const router = express.Router();
-const rateLimit = require('express-rate-limit');
-const { sendOtp, verifyOtp, register, login, googleLogin, sendForgotPasswordOtp, resetPassword } = require('../controllers/authController');
 
 const otpLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -22,5 +23,5 @@ router.post('/google', googleLogin);
 router.post('/forgot-password-otp', otpLimiter, sendForgotPasswordOtp);
 router.post('/reset-password', resetPassword);
 
-module.exports = router;
+export default router;
 

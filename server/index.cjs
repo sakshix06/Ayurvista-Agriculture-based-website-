@@ -214,7 +214,7 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 // Import and use new Auth routes for Google and Forgot Password
-const authRoutes = require("./routes/authRoutes");
+const authRoutes = require("./routes/authRoutes.js").default;
 app.use('/api/auth', authRoutes);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));

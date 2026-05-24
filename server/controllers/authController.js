@@ -1,9 +1,9 @@
-const jwt = require("jsonwebtoken");
-const bcrypt = require("bcryptjs");
-const User = require("../models/User");
-const Otp = require("../models/Otp");
-const { OAuth2Client } = require("google-auth-library");
-const { sendWelcomeEmail, sendPasswordResetOtpEmail } = require("../services/mailService");
+import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
+import User from "../models/User.js";
+import Otp from "../models/Otp.js";
+import { OAuth2Client } from "google-auth-library";
+import { sendWelcomeEmail, sendPasswordResetOtpEmail } from "../services/mailService.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-please-change";
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "dev-google-client-id";
@@ -292,7 +292,7 @@ const resetPassword = async (req, res) => {
   }
 };
 
-module.exports = {
+export {
   sendOtp,
   verifyOtp,
   register,

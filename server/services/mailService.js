@@ -1,4 +1,4 @@
-const nodemailer = require("nodemailer");
+import nodemailer from "nodemailer";
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendWelcomeEmail = async (email, username) => {
+export const sendWelcomeEmail = async (email, username) => {
   try {
     const mailOptions = {
       from: process.env.GMAIL_USER,
@@ -23,7 +23,7 @@ const sendWelcomeEmail = async (email, username) => {
   }
 };
 
-const sendPasswordResetOtpEmail = async (email, otp) => {
+export const sendPasswordResetOtpEmail = async (email, otp) => {
   try {
     const mailOptions = {
       from: process.env.GMAIL_USER,
@@ -36,9 +36,4 @@ const sendPasswordResetOtpEmail = async (email, otp) => {
   } catch (error) {
     console.error("Error sending password reset OTP:", error);
   }
-};
-
-module.exports = {
-  sendWelcomeEmail,
-  sendPasswordResetOtpEmail,
 };
