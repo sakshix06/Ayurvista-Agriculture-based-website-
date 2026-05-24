@@ -197,7 +197,7 @@ const googleLogin = async (req, res) => {
     const payload = ticket.getPayload();
     if (!payload) return res.status(400).json({ message: "Invalid Google token" });
 
-    const { email, name } = payload;
+    const { email, name, picture } = payload;
     
     // Find or create user
     let user = await User.findOne({ email });
@@ -219,7 +219,7 @@ const googleLogin = async (req, res) => {
 
     return res.json({
       token: jwtToken,
-      user: { id: user._id, name: user.name, email: user.email },
+      user: { id: user._id, name: user.name, email: user.email, picture: picture },
       message: "Google login successful",
     });
 

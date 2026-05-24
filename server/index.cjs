@@ -121,6 +121,13 @@ app.post('/api/auth/register', async (req, res) => {
         { expiresIn: '7d' }
       );
       
+      // Attempt to send welcome email in the background without blocking the response
+      import("./services/mailService.js").then((mailService) => {
+        mailService.sendWelcomeEmail(user.email, user.name).catch((err) => {
+          console.error("Failed to send welcome email:", err);
+        });
+      }).catch((err) => console.error("Failed to load mail service:", err));
+      
       return res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
     } else {
       // Use in-memory storage
@@ -139,6 +146,13 @@ app.post('/api/auth/register', async (req, res) => {
         JWT_SECRET, 
         { expiresIn: '7d' }
       );
+      
+      // Attempt to send welcome email in the background
+      import("./services/mailService.js").then((mailService) => {
+        mailService.sendWelcomeEmail(user.email, user.name).catch((err) => {
+          console.error("Failed to send welcome email:", err);
+        });
+      }).catch((err) => console.error("Failed to load mail service:", err));
       
       return res.json({ token, user: { id: userId, name: user.name, email: user.email } });
     }

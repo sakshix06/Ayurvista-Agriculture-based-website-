@@ -37,11 +37,21 @@ const Login = () => {
         return;
       }
 
+      // Clear old state
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("herbalgarden_username");
+      localStorage.removeItem("herbalgarden_email");
+      localStorage.removeItem("herbalgarden_user_id");
+      localStorage.removeItem("profile_image");
+
       // ✅ SAVE TOKEN + USER
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
 
       toast.success(`Welcome back ${data.user.name} 🌿`);
+      window.dispatchEvent(new Event("storage"));
       navigate("/dashboard");
     } catch (err) {
       toast.error("Server error. Try again.");
@@ -64,9 +74,20 @@ const Login = () => {
         toast.error(data.message || "Google login failed");
         return;
       }
+      // Clear old state
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("herbalgarden_username");
+      localStorage.removeItem("herbalgarden_email");
+      localStorage.removeItem("herbalgarden_user_id");
+      localStorage.removeItem("profile_image");
+
       localStorage.setItem("token", data.token);
       localStorage.setItem("user", JSON.stringify(data.user));
+      
       toast.success(`Welcome back ${data.user.name} 🌿`);
+      window.dispatchEvent(new Event("storage"));
       navigate("/dashboard");
     } catch (err) {
       toast.error("Server error during Google login.");

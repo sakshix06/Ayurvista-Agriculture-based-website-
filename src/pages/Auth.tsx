@@ -43,11 +43,23 @@ export default function Auth({ initialMode = "login" }: { initialMode?: "login" 
         toast.error(data.message || "Login failed");
         return;
       }
+      
+      // Clear old state
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("herbalgarden_username");
+      localStorage.removeItem("herbalgarden_email");
+      localStorage.removeItem("herbalgarden_user_id");
+      localStorage.removeItem("profile_image");
+
       localStorage.setItem("auth_token", data.token);
       localStorage.setItem("herbalgarden_username", data.user.name);
       localStorage.setItem("herbalgarden_email", data.user.email);
       if (data.user.id) localStorage.setItem("herbalgarden_user_id", data.user.id);
+      
       toast.success(`Welcome back ${data.user.name} 🌿`);
+      window.dispatchEvent(new Event("storage"));
       navigate("/");
     } catch (err) {
       toast.error("Server error. Try again.");
@@ -70,11 +82,26 @@ export default function Auth({ initialMode = "login" }: { initialMode?: "login" 
         toast.error(data.message || "Google login failed");
         return;
       }
+      
+      // Clear old state before setting new user
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("herbalgarden_username");
+      localStorage.removeItem("herbalgarden_email");
+      localStorage.removeItem("herbalgarden_user_id");
+      localStorage.removeItem("profile_image");
+      
       localStorage.setItem("auth_token", data.token);
       localStorage.setItem("herbalgarden_username", data.user.name);
       localStorage.setItem("herbalgarden_email", data.user.email);
       if (data.user.id) localStorage.setItem("herbalgarden_user_id", data.user.id);
+      if (data.user.picture) localStorage.setItem("profile_image", data.user.picture);
+      
       toast.success(`Welcome ${data.user.name} 🌿`);
+      
+      // Dispatch storage event to notify other components (like Navbar) of auth change
+      window.dispatchEvent(new Event("storage"));
       navigate("/");
     } catch (err) {
       toast.error("Server error during Google login.");
@@ -110,11 +137,23 @@ export default function Auth({ initialMode = "login" }: { initialMode?: "login" 
         toast.error(data.message || "Registration failed");
         return;
       }
+      
+      // Clear old state
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("herbalgarden_username");
+      localStorage.removeItem("herbalgarden_email");
+      localStorage.removeItem("herbalgarden_user_id");
+      localStorage.removeItem("profile_image");
+
       localStorage.setItem("auth_token", data.token);
       localStorage.setItem("herbalgarden_username", data.user.name);
       localStorage.setItem("herbalgarden_email", data.user.email);
       if (data.user.id) localStorage.setItem("herbalgarden_user_id", data.user.id);
+      
       toast.success("Account created 🌿");
+      window.dispatchEvent(new Event("storage"));
       navigate("/");
     } catch (err) {
       toast.error("Server error. Try again.");
