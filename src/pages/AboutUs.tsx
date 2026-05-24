@@ -6,11 +6,13 @@ import { useState } from "react";
 const AboutUs = () => {
 
   const [email, setEmail] = useState("");
+  const API_URL = import.meta.env.VITE_API_URL;
+
 
  const handleSubscribe = async () => {
   try {
     const response = await fetch(
-      "http://localhost:5000/api/mail/subscribe",
+      `${API_URL}/api/mail/subscribe`,
       {
         method: "POST",
         headers: {

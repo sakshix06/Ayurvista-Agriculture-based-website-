@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 const Success = () => {
   const navigate = useNavigate();
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     const placeOrderAfterStripe = async () => {
@@ -16,7 +17,7 @@ const Success = () => {
       const orderData = JSON.parse(pendingOrder);
 
       try {
-        const res = await fetch("http://localhost:5000/api/order/place-order", {
+        const res = await fetch(`${API_URL}/api/order/place-order`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(orderData),

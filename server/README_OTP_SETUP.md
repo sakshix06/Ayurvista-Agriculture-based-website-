@@ -174,12 +174,12 @@ server/
 Example:
 ```bash
 # Send OTP
-curl -X POST http://localhost:5000/api/auth/send-otp \
+curl -X POST https://ayurvista-agriculture-based-website.onrender.com/api/auth/send-otp \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com"}'
 
 # Verify OTP
-curl -X POST http://localhost:5000/api/auth/verify-otp \
+curl -X POST https://ayurvista-agriculture-based-website.onrender.com/api/auth/verify-otp \
   -H "Content-Type: application/json" \
   -d '{"email":"test@example.com","otp":"123456","name":"Test User","password":"password123"}'
 ```
