@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Leaf, Mail, Lock, User, Eye, EyeOff, Calendar, ShieldCheck, BrainCircuit, CheckCircle2, Users } from "lucide-react";
 import { toast } from "sonner";
+import { GoogleLogin } from "@react-oauth/google";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -50,6 +51,33 @@ export default function Auth({ initialMode = "login" }: { initialMode?: "login" 
       navigate("/");
     } catch (err) {
       toast.error("Server error. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      setLoading(true);
+      const targetUrl = API_URL ? `${API_URL}/api/auth/google` : '/api/auth/google';
+      const res = await fetch(targetUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.message || "Google login failed");
+        return;
+      }
+      localStorage.setItem("auth_token", data.token);
+      localStorage.setItem("herbalgarden_username", data.user.name);
+      localStorage.setItem("herbalgarden_email", data.user.email);
+      if (data.user.id) localStorage.setItem("herbalgarden_user_id", data.user.id);
+      toast.success(`Welcome ${data.user.name} 🌿`);
+      navigate("/");
+    } catch (err) {
+      toast.error("Server error during Google login.");
     } finally {
       setLoading(false);
     }
@@ -214,13 +242,11 @@ export default function Auth({ initialMode = "login" }: { initialMode?: "login" 
                     <div className="h-px bg-white/10 flex-grow" />
                   </div>
 
-                  <div className="flex gap-4 mt-6">
-                    <Button variant="outline" className="flex-1 bg-black/20 border-white/10 hover:bg-white/5 text-white h-12 rounded-xl transition-all">
-                       Google
-                    </Button>
-                    <Button variant="outline" className="flex-1 bg-black/20 border-white/10 hover:bg-white/5 text-white h-12 rounded-xl transition-all">
-                       Facebook
-                    </Button>
+                  <div className="flex justify-center mt-6">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => toast.error("Google Login Failed")}
+                    />
                   </div>
 
                   <p className="mt-8 text-center text-gray-400">
@@ -327,13 +353,11 @@ export default function Auth({ initialMode = "login" }: { initialMode?: "login" 
                     <div className="h-px bg-white/10 flex-grow" />
                   </div>
 
-                  <div className="flex gap-4 mt-4">
-                    <Button variant="outline" className="flex-1 bg-black/20 border-white/10 hover:bg-white/5 text-white h-10 text-sm rounded-xl transition-all">
-                       Google
-                    </Button>
-                    <Button variant="outline" className="flex-1 bg-black/20 border-white/10 hover:bg-white/5 text-white h-10 text-sm rounded-xl transition-all">
-                       Facebook
-                    </Button>
+                  <div className="flex justify-center mt-4">
+                    <GoogleLogin
+                      onSuccess={handleGoogleSuccess}
+                      onError={() => toast.error("Google Signup Failed")}
+                    />
                   </div>
 
                   <p className="mt-6 text-center text-sm text-gray-400">

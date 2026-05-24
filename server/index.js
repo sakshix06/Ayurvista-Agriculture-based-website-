@@ -7,7 +7,14 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    process.env.FRONTEND_URI, 
+    'http://localhost:5173', 
+    'https://ayurvista-agriculture-based-website.onrender.com'
+  ].filter(Boolean),
+  credentials: true,
+}));
 app.use(express.json());
 
 // Trust proxy for accurate IP addresses

@@ -2,6 +2,9 @@ import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
 import { I18nProvider } from './i18n/I18nProvider'
+import { GoogleOAuthProvider } from '@react-oauth/google'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-client-id';
 
 // Error boundary for the entire app
 try {
@@ -12,9 +15,11 @@ try {
 
   const root = createRoot(rootElement);
   root.render(
-    <I18nProvider>
-      <App />
-    </I18nProvider>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <I18nProvider>
+        <App />
+      </I18nProvider>
+    </GoogleOAuthProvider>
   );
 } catch (error) {
   console.error("Failed to render app:", error);

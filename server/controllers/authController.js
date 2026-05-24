@@ -2,8 +2,12 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Otp = require("../models/Otp");
+const { OAuth2Client } = require("google-auth-library");
+const { sendWelcomeEmail, sendPasswordResetOtpEmail } = require("../services/mailService");
 
 const JWT_SECRET = process.env.JWT_SECRET || "dev-secret-please-change";
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "dev-google-client-id";
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
 /** Generate 6-digit OTP */
 const generateOTP = () => {
@@ -97,6 +101,9 @@ const verifyOtp = async (req, res) => {
 
     await Otp.updateOne({ _id: otpRecord._id }, { verified: true });
 
+    // Send Welcome Email
+    await sendWelcomeEmail(user.email, user.name);
+
     // Create JWT Token
     const token = jwt.sign(
       { sub: user._id, email: user.email },
@@ -174,9 +181,123 @@ const login = async (req, res) => {
   }
 };
 
+/** ======================================================
+ *  GOOGLE LOGIN / SIGNUP
+ * ====================================================== */
+const googleLogin = async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) return res.status(400).json({ message: "No token provided" });
+
+    // Verify Google Token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: GOOGLE_CLIENT_ID,
+    });
+    const payload = ticket.getPayload();
+    if (!payload) return res.status(400).json({ message: "Invalid Google token" });
+
+    const { email, name } = payload;
+    
+    // Find or create user
+    let user = await User.findOne({ email });
+    if (!user) {
+      // Auto-create user for new Google signup
+      const randomPassword = await bcrypt.hash(Math.random().toString(36).slice(-8), 10);
+      user = await User.create({ email, name, passwordHash: randomPassword });
+      
+      // Send welcome email
+      await sendWelcomeEmail(email, name);
+    }
+
+    // Create JWT
+    const jwtToken = jwt.sign(
+      { sub: user._id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    return res.json({
+      token: jwtToken,
+      user: { id: user._id, name: user.name, email: user.email },
+      message: "Google login successful",
+    });
+
+  } catch (err) {
+    console.error("Google login error:", err);
+    res.status(500).json({ message: "Server error during Google login" });
+  }
+};
+
+/** ======================================================
+ *  FORGOT PASSWORD - SEND OTP
+ * ====================================================== */
+const sendForgotPasswordOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ message: "Email is required" });
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const otp = generateOTP();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+    await Otp.deleteMany({ email });
+    await Otp.create({ email, otp, expiresAt });
+
+    await sendPasswordResetOtpEmail(email, otp);
+
+    return res.json({ message: "Password reset OTP sent to email" });
+  } catch (err) {
+    console.error("sendForgotPasswordOtp Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/** ======================================================
+ *  RESET PASSWORD
+ * ====================================================== */
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const otpRecord = await Otp.findOne({ email, verified: false }).sort({ createdAt: -1 });
+    if (!otpRecord) return res.status(404).json({ message: "OTP not found or already used" });
+
+    if (new Date() > otpRecord.expiresAt) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+      return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+    }
+
+    if (otpRecord.otp !== otp) {
+      return res.status(400).json({ message: "Invalid OTP" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    await user.save();
+
+    await Otp.updateOne({ _id: otpRecord._id }, { verified: true });
+
+    return res.json({ message: "Password has been reset successfully" });
+  } catch (err) {
+    console.error("resetPassword Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 module.exports = {
   sendOtp,
   verifyOtp,
   register,
   login,
+  googleLogin,
+  sendForgotPasswordOtp,
+  resetPassword
 };

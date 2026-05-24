@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Leaf } from "lucide-react";
 import { toast } from "sonner";
+import { GoogleLogin } from "@react-oauth/google";
 
 const Register = () => {
   const [name, setName] = useState("");
@@ -45,6 +46,31 @@ const Register = () => {
       navigate("/dashboard");
     } catch (err) {
       toast.error("Server error. Try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      setLoading(true);
+      const targetUrl = API_URL ? `${API_URL}/api/auth/google` : '/api/auth/google';
+      const res = await fetch(targetUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.message || "Google signup failed");
+        return;
+      }
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      toast.success("Account created successfully 🌿");
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error("Server error during Google signup.");
     } finally {
       setLoading(false);
     }
@@ -94,6 +120,17 @@ const Register = () => {
               {loading ? "Creating..." : "Register"}
             </Button>
           </form>
+
+          <div className="mt-6 flex flex-col items-center w-full">
+            <div className="relative flex items-center justify-center w-full mb-4">
+              <div className="absolute border-t border-gray-300 w-full"></div>
+              <span className="bg-white px-3 text-sm text-gray-500 relative">Or continue with</span>
+            </div>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => toast.error("Google Signup Failed")}
+            />
+          </div>
 
           <p className="mt-6 text-sm text-gray-600">
             Already have an account?{" "}

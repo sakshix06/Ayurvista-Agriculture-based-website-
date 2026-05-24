@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Leaf } from "lucide-react";
 import { toast } from "sonner";
+import { GoogleLogin } from "@react-oauth/google";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -49,6 +50,31 @@ const Login = () => {
     }
   };
 
+  const handleGoogleSuccess = async (credentialResponse: any) => {
+    try {
+      setLoading(true);
+      const targetUrl = API_URL ? `${API_URL}/api/auth/google` : '/api/auth/google';
+      const res = await fetch(targetUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.message || "Google login failed");
+        return;
+      }
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      toast.success(`Welcome back ${data.user.name} 🌿`);
+      navigate("/dashboard");
+    } catch (err) {
+      toast.error("Server error during Google login.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#e7f3ec] via-[#d6eadf] to-[#c5dfd4]">
       <div className="w-full max-w-5xl h-[560px] bg-white rounded-3xl shadow-2xl flex overflow-hidden">
@@ -82,6 +108,12 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
             />
 
+            <div className="flex justify-end">
+              <Link to="/forgot-password" className="text-sm text-[#2f6f4e] hover:underline">
+                Forgot Password?
+              </Link>
+            </div>
+
             <Button
               disabled={loading}
               className="w-full bg-[#2f6f4e] hover:bg-[#24563d] text-white rounded-full h-11"
@@ -89,6 +121,17 @@ const Login = () => {
               {loading ? "Logging in..." : "Login"}
             </Button>
           </form>
+
+          <div className="mt-6 flex flex-col items-center w-full">
+            <div className="relative flex items-center justify-center w-full mb-4">
+              <div className="absolute border-t border-gray-300 w-full"></div>
+              <span className="bg-white px-3 text-sm text-gray-500 relative">Or continue with</span>
+            </div>
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => toast.error("Google Login Failed")}
+            />
+          </div>
 
           <p className="mt-6 text-sm text-gray-600">
             Don’t have an account?{" "}
