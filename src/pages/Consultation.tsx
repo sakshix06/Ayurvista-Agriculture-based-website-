@@ -165,6 +165,20 @@ Report generated on: ${new Date().toLocaleString()}
     
     toast.success("Processing payment...");
     setTimeout(() => {
+      // Save consultation to localStorage
+      const newConsultation = {
+        doctor: formData.doctor,
+        date: formData.date ? format(formData.date, "dd MMM yyyy") : format(new Date(), "dd MMM yyyy"),
+        timeSlot: formData.timeSlot || "10:00 AM",
+        status: "Confirmed",
+        details: "Ayurvedic wellness assessment"
+      };
+      
+      const existing = localStorage.getItem("booked_consultations");
+      const list = existing ? JSON.parse(existing) : [];
+      list.unshift(newConsultation);
+      localStorage.setItem("booked_consultations", JSON.stringify(list));
+
       toast.success("Appointment Booked! You will receive confirmation details soon.");
       setShowPayment(false);
       setStep(1);

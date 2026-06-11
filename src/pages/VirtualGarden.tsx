@@ -1,10 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import GlobalNavigation from "@/components/GlobalNavigation";
-import { Search, MessageCircle, Send, X, Leaf, Info, Eye, ChevronRight } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Search,
+  MessageCircle,
+  Send,
+  X,
+  Leaf,
+  Info,
+  Eye,
+  ChevronRight,
+  Trophy,
+  Award,
+  Sparkles,
+  HelpCircle,
+  CheckCircle2,
+  AlertCircle
+} from "lucide-react";
 
 interface Plant {
   id: number;
@@ -18,6 +34,8 @@ interface Plant {
 }
 
 const VirtualGarden = () => {
+  const { toast } = useToast();
+  
   const [selectedPlant, setSelectedPlant] = useState<Plant | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -26,6 +44,81 @@ const VirtualGarden = () => {
   const [chatMessages, setChatMessages] = useState([
     { type: "bot", message: "Welcome to AYUSH Virtual Herbal Garden! I can help you learn about medicinal plants. What would you like to explore?" }
   ]);
+
+  // Gamification States
+  const [xp, setXp] = useState(450);
+  const [points, setPoints] = useState(860);
+  const [discoveredIds, setDiscoveredIds] = useState<number[]>([]);
+  const [achievement, setAchievement] = useState<{ plantName: string; xp: number; pts: number } | null>(null);
+
+  // Daily Quiz States
+  const [quizOpen, setQuizOpen] = useState(false);
+  const [quizAnswered, setQuizAnswered] = useState(false);
+  const [quizCorrect, setQuizCorrect] = useState<boolean | null>(null);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Load gamification data
+    const savedXp = localStorage.getItem("ayurvista_journey_xp");
+    const savedPoints = localStorage.getItem("herbal_points_balance");
+    const savedExplored = localStorage.getItem("ayurvista_explored_plants");
+
+    if (savedXp) setXp(Number(savedXp));
+    if (savedPoints) setPoints(Number(savedPoints));
+    if (savedExplored) {
+      try {
+        setDiscoveredIds(JSON.parse(savedExplored));
+      } catch (e) {}
+    }
+
+    // Check if daily quiz was completed today
+    const quizDate = localStorage.getItem("daily_quiz_completed_date");
+    const today = new Date().toDateString();
+    if (quizDate === today) {
+      setQuizAnswered(true);
+      setQuizCorrect(true);
+    }
+  }, []);
+
+  const getLevelInfo = (currentXp: number) => {
+    if (currentXp >= 600) return { title: "Gold Explorer", rank: 4, nextXp: 1000, progress: 100 };
+    if (currentXp >= 350) return { title: "Herbal Researcher", rank: 3, nextXp: 600, progress: ((currentXp - 350) / 250) * 100 };
+    if (currentXp >= 150) return { title: "Plant Explorer", rank: 2, nextXp: 350, progress: ((currentXp - 150) / 200) * 100 };
+    return { title: "Beginner Herbalist", rank: 1, nextXp: 150, progress: (currentXp / 150) * 100 };
+  };
+
+  const levelInfo = getLevelInfo(xp);
+
+  const handleConvertXp = () => {
+    if (xp < 100) {
+      toast({
+        title: "Insufficient XP",
+        description: "You need at least 100 XP to convert into points.",
+        variant: "destructive"
+      });
+      return;
+    }
+    const xpToConvert = Math.floor(xp / 100) * 100;
+    const pointsEarned = (xpToConvert / 100) * 10;
+    
+    const newXp = xp - xpToConvert;
+    const newPoints = points + pointsEarned;
+
+    setXp(newXp);
+    setPoints(newPoints);
+
+    localStorage.setItem("ayurvista_journey_xp", String(newXp));
+    localStorage.setItem("herbal_points_balance", String(newPoints));
+    
+    const savedLifetime = localStorage.getItem("lifetime_points_earned");
+    const currentLifetime = savedLifetime ? Number(savedLifetime) : 960;
+    localStorage.setItem("lifetime_points_earned", String(currentLifetime + pointsEarned));
+
+    toast({
+      title: "XP Converted!",
+      description: `Successfully converted ${xpToConvert} XP into ${pointsEarned} Herbal Points!`
+    });
+  };
 
   const plants: Plant[] = [
     {
@@ -126,38 +219,163 @@ const VirtualGarden = () => {
     }
   };
 
+  const handlePlantClick = (plant: Plant) => {
+    setSelectedPlant(plant);
+
+    // Trigger discover achievement if not already explored
+    if (!discoveredIds.includes(plant.id)) {
+      const newExplored = [...discoveredIds, plant.id];
+      setDiscoveredIds(newExplored);
+      localStorage.setItem("ayurvista_explored_plants", JSON.stringify(newExplored));
+
+      const addedXp = 25;
+      const addedPts = 3;
+      const newXp = xp + addedXp;
+      const newPoints = points + addedPts;
+
+      setXp(newXp);
+      setPoints(newPoints);
+
+      localStorage.setItem("ayurvista_journey_xp", String(newXp));
+      localStorage.setItem("herbal_points_balance", String(newPoints));
+
+      const savedLifetime = localStorage.getItem("lifetime_points_earned");
+      const currentLifetime = savedLifetime ? Number(savedLifetime) : 960;
+      localStorage.setItem("lifetime_points_earned", String(currentLifetime + addedPts));
+
+      // Display achievement popup
+      setAchievement({
+        plantName: plant.name,
+        xp: addedXp,
+        pts: addedPts
+      });
+    }
+  };
+
+  const handleAnswerSubmit = () => {
+    if (!selectedAnswer) return;
+
+    const isCorrect = selectedAnswer === "Curcumin";
+    setQuizCorrect(isCorrect);
+    setQuizAnswered(true);
+
+    if (isCorrect) {
+      const addedXp = 50;
+      const addedPts = 5;
+      const newXp = xp + addedXp;
+      const newPoints = points + addedPts;
+
+      setXp(newXp);
+      setPoints(newPoints);
+
+      localStorage.setItem("ayurvista_journey_xp", String(newXp));
+      localStorage.setItem("herbal_points_balance", String(newPoints));
+      localStorage.setItem("daily_quiz_completed_date", new Date().toDateString());
+
+      const savedLifetime = localStorage.getItem("lifetime_points_earned");
+      const currentLifetime = savedLifetime ? Number(savedLifetime) : 960;
+      localStorage.setItem("lifetime_points_earned", String(currentLifetime + addedPts));
+
+      toast({
+        title: "Correct Answer! 🎉",
+        description: `You earned +50 XP and +5 Herbal Points!`
+      });
+    } else {
+      toast({
+        title: "Wrong Answer",
+        description: "Review your herbal knowledge and try again tomorrow!",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 dark:from-green-950 dark:via-emerald-950 dark:to-teal-950">
+    <div className="min-h-screen bg-[#F4F8F5] text-[#1D3D18]">
       <GlobalNavigation />
       
+      {/* HUD Header Bar */}
+      <div className="pt-24 pb-4 px-4 bg-white border-b border-[#E1EDE4] sticky top-0 z-30 shadow-sm">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#EAF2EC] text-[#2D6A4F] flex items-center justify-center text-xl border border-[#C5DCD0]">
+              🏆
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-sm">{levelInfo.title}</span>
+                <Badge className="bg-[#EAF2EC] text-[#2D6A4F] border border-[#C5DCD0] font-bold text-[9px] py-0.5 px-1.5">LVL {levelInfo.rank}</Badge>
+              </div>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="w-32 sm:w-40 bg-gray-100 rounded-full h-2 overflow-hidden border border-[#E1EDE4]">
+                  <div className="h-full bg-[#2D6A4F] transition-all" style={{ width: `${levelInfo.progress}%` }} />
+                </div>
+                <span className="text-[10px] font-black text-[#2D6A4F]">{xp} XP</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Points Balance Counter */}
+            <div className="bg-[#EAF2EC] border border-[#C5DCD0] rounded-xl px-4 py-2 flex items-center gap-2.5">
+              <Award className="h-5 w-5 text-[#2D6A4F]" />
+              <div>
+                <p className="text-[10px] text-[#5C6E5A] font-bold uppercase leading-none">Herbal Points</p>
+                <p className="text-base font-black text-[#1D3D18] leading-none mt-1">{points} pts</p>
+              </div>
+            </div>
+
+            {/* Quiz Button */}
+            <Button
+              variant="outline"
+              onClick={() => setQuizOpen(true)}
+              className="border-[#C5DCD0] text-[#2D6A4F] hover:bg-[#EAF2EC] font-bold text-xs rounded-xl flex items-center gap-1.5 h-10 px-4"
+            >
+              <HelpCircle className="w-4 h-4" />
+              Daily Herb Quiz
+            </Button>
+
+            {/* Convert XP Button */}
+            {xp >= 100 && (
+              <Button
+                onClick={handleConvertXp}
+                className="bg-[#1D3D18] hover:bg-[#2D6A4F] text-[#E2ECE9] font-bold text-xs rounded-xl h-10 px-4 flex items-center gap-1.5"
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                Convert XP
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Hero Section */}
-      <div className="pt-20 pb-12 px-4">
+      <div className="py-12 px-4">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-full px-6 py-3 mb-6 shadow-lg">
-            <Leaf className="h-5 w-5 text-green-600 mr-2" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">AYUSH Virtual Herbal Garden</span>
+          <div className="inline-flex items-center bg-white border border-[#E1EDE4] rounded-full px-6 py-2.5 mb-6 shadow-sm">
+            <Leaf className="h-4 w-4 text-[#2D6A4F] mr-2 animate-pulse" />
+            <span className="text-xs font-bold text-[#5C6E5A]">AYUSH Virtual Herbal Garden</span>
           </div>
           
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-black text-[#1D3D18] mb-4">
             Explore Nature's
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-600 to-emerald-600"> Pharmacy</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#2D6A4F] to-[#a8e063]"> Pharmacy</span>
           </h1>
           
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-            Discover the healing power of medicinal plants through our interactive virtual garden. 
-            Learn about AYUSH traditions and explore nature's remedies.
+          <p className="text-sm text-[#5C6E5A] mb-8 max-w-2xl mx-auto font-medium">
+            Explore medicinal plants to earn experience points (XP) and real shopping discounts!
+            Click on interactive plant cards to discover benefits and earn Herbal Points.
           </p>
 
           {/* Search and Filter */}
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-center mb-12 max-w-4xl mx-auto">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <div className="flex flex-col md:flex-row gap-4 items-center justify-center mb-10 max-w-4xl mx-auto">
+            <div className="relative flex-1 max-w-md w-full">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#7A8C78] h-4 w-4" />
               <Input
                 type="text"
                 placeholder="Search plants..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-gray-200 dark:border-gray-700"
+                className="pl-10 bg-white border-[#E1EDE4] rounded-xl h-10 text-xs focus:ring-[#2D6A4F]"
               />
             </div>
             
@@ -167,10 +385,10 @@ const VirtualGarden = () => {
                   key={category}
                   variant={selectedCategory === category ? "default" : "outline"}
                   onClick={() => setSelectedCategory(category)}
-                  className={`${
+                  className={`text-xs font-bold rounded-xl h-9 px-4 border-[#C5DCD0] ${
                     selectedCategory === category 
-                      ? "bg-green-600 hover:bg-green-700 text-white" 
-                      : "bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:bg-green-50 dark:hover:bg-green-900"
+                      ? "bg-[#1D3D18] hover:bg-[#2D6A4F] text-white" 
+                      : "bg-white text-[#2D6A4F] hover:bg-[#EAF2EC]"
                   }`}
                 >
                   {category === "all" ? "All Plants" : category}
@@ -185,121 +403,130 @@ const VirtualGarden = () => {
       <div className="px-4 pb-20">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredPlants.map((plant) => (
-              <Card 
-                key={plant.id} 
-                className="group hover:shadow-2xl transition-all duration-300 cursor-pointer bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-gray-200 dark:border-gray-700 overflow-hidden"
-                onClick={() => setSelectedPlant(plant)}
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={plant.image}
-                    alt={plant.name}
-                    className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute top-4 right-4">
-                    <Badge 
-                      variant="secondary" 
-                      className="bg-white/90 dark:bg-gray-800/90 text-green-700 dark:text-green-300"
-                    >
-                      {plant.category}
-                    </Badge>
-                  </div>
-                  {plant.isInteractive && (
-                    <div className="absolute top-4 left-4">
-                      <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                        <Eye className="h-4 w-4 text-white" />
+            {filteredPlants.map((plant) => {
+              const isExplored = discoveredIds.includes(plant.id);
+              
+              return (
+                <Card 
+                  key={plant.id} 
+                  className="group hover:shadow-md transition-all duration-300 cursor-pointer bg-white border border-[#E1EDE4] rounded-2xl overflow-hidden"
+                  onClick={() => handlePlantClick(plant)}
+                >
+                  <div className="relative overflow-hidden h-48 bg-white flex items-center justify-center p-4">
+                    <img
+                      src={plant.image}
+                      alt={plant.name}
+                      className="max-h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute top-4 right-4">
+                      <Badge 
+                        variant="secondary" 
+                        className="bg-white/95 border border-[#E1EDE4] text-[#2D6A4F] font-bold text-[9px]"
+                      >
+                        {plant.category}
+                      </Badge>
+                    </div>
+                    {isExplored ? (
+                      <div className="absolute top-4 left-4 bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full text-[9px] font-extrabold flex items-center gap-1 shadow-sm">
+                        <CheckCircle2 className="h-3 w-3" />
+                        <span>Discovered</span>
                       </div>
-                    </div>
-                  )}
-                </div>
-                
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{plant.name}</h3>
-                  <p className="text-sm italic text-gray-600 dark:text-gray-400 mb-3">{plant.scientificName}</p>
-                  <p className="text-gray-700 dark:text-gray-300 mb-4 line-clamp-2">{plant.description}</p>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex flex-wrap gap-1">
-                      {plant.benefits.slice(0, 2).map((benefit, index) => (
-                        <Badge 
-                          key={index} 
-                          variant="outline" 
-                          className="text-xs border-green-200 dark:border-green-700 text-green-700 dark:text-green-300"
-                        >
-                          {benefit}
-                        </Badge>
-                      ))}
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+                    ) : (
+                      <div className="absolute top-4 left-4 bg-[#FFF9E6] border border-amber-200 text-amber-600 px-2 py-0.5 rounded-full text-[9px] font-extrabold flex items-center gap-1 animate-pulse shadow-sm">
+                        <Sparkles className="h-3 w-3" />
+                        <span>Unexplored</span>
+                      </div>
+                    )}
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                  
+                  <CardContent className="p-5 border-t border-[#F0F6F1] space-y-3">
+                    <div>
+                      <h3 className="text-base font-extrabold text-[#1D3D18]">{plant.name}</h3>
+                      <p className="text-xs italic text-[#7A8C78] mt-0.5">{plant.scientificName}</p>
+                    </div>
+                    
+                    <p className="text-xs text-[#5C6E5A] line-clamp-2 leading-relaxed">{plant.description}</p>
+                    
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="flex flex-wrap gap-1.5">
+                        {plant.benefits.slice(0, 2).map((benefit, index) => (
+                          <Badge 
+                            key={index} 
+                            variant="outline" 
+                            className="text-[9px] border-[#C5DCD0] text-[#2D6A4F] font-semibold px-2"
+                          >
+                            {benefit}
+                          </Badge>
+                        ))}
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-[#7A8C78] group-hover:text-[#2D6A4F] transition-colors" />
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </div>
 
       {/* Plant Detail Modal */}
       {selectedPlant && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="relative">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl max-w-xl w-full overflow-hidden border border-[#E1EDE4] shadow-2xl">
+            <div className="relative h-64 bg-[#F4F8F5] flex items-center justify-center p-6">
               <img
                 src={selectedPlant.image}
                 alt={selectedPlant.name}
-                className="w-full h-64 object-cover"
+                className="max-h-full object-contain"
               />
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedPlant(null)}
-                className="absolute top-4 right-4 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800"
+                className="absolute top-4 right-4 bg-white/90 hover:bg-white text-[#1D3D18] p-1.5 h-auto rounded-full border border-[#E1EDE4]"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
             
-            <div className="p-6">
-              <div className="flex items-center gap-3 mb-4">
-                <Badge className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+            <div className="p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <Badge className="bg-[#EAF2EC] text-[#2D6A4F] border border-[#C5DCD0] font-bold text-[10px]">
                   {selectedPlant.category}
                 </Badge>
-                <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                <span className="text-sm text-gray-600 dark:text-gray-400">Interactive Plant</span>
+                <div className="w-1.5 h-1.5 bg-[#2D6A4F] rounded-full"></div>
+                <span className="text-[10px] text-[#5C6E5A] font-bold uppercase">Interactive Plant</span>
               </div>
               
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-                {selectedPlant.name}
-              </h2>
-              <p className="text-lg italic text-gray-600 dark:text-gray-400 mb-4">
-                {selectedPlant.scientificName}
-              </p>
+              <div>
+                <h2 className="text-2xl font-black text-[#1D3D18]">{selectedPlant.name}</h2>
+                <p className="text-xs italic text-[#7A8C78] mt-1">{selectedPlant.scientificName}</p>
+              </div>
               
-              <p className="text-gray-700 dark:text-gray-300 mb-6 leading-relaxed">
+              <p className="text-xs text-[#5C6E5A] leading-relaxed">
                 {selectedPlant.description}
               </p>
               
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Info className="h-5 w-5 text-green-600" />
+              <div className="space-y-2">
+                <h3 className="text-sm font-extrabold text-[#1D3D18] flex items-center gap-2">
+                  <Info className="h-4 w-4 text-[#2D6A4F]" />
                   Health Benefits
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {selectedPlant.benefits.map((benefit, index) => (
                     <div 
                       key={index}
-                      className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg"
+                      className="flex items-center gap-2.5 p-2.5 bg-[#F4F8F5] border border-[#E1EDE4] rounded-xl text-xs"
                     >
-                      <div className="w-2 h-2 bg-green-600 rounded-full"></div>
-                      <span className="text-gray-700 dark:text-gray-300">{benefit}</span>
+                      <div className="w-1.5 h-1.5 bg-[#2D6A4F] rounded-full flex-shrink-0"></div>
+                      <span className="text-[#5C6E5A] font-medium">{benefit}</span>
                     </div>
                   ))}
                 </div>
               </div>
               
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+              <div className="pt-4 border-t border-[#F0F6F1] text-center">
+                <p className="text-[10px] text-[#7A8C78] font-semibold">
                   💡 Tip: Consult with an Ayurvedic practitioner before using medicinal plants
                 </p>
               </div>
@@ -308,53 +535,175 @@ const VirtualGarden = () => {
         </div>
       )}
 
+      {/* Achievement Discovery Modal Popup */}
+      {achievement && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <Card className="bg-gradient-to-br from-[#EAF2EC] to-[#D5EADF] border border-[#a8e063] shadow-2xl max-w-sm w-full rounded-3xl p-6 text-center space-y-6 relative overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute right-0 top-0 w-24 h-24 bg-[#a8e063]/10 rounded-full filter blur-xl pointer-events-none" />
+            
+            <div className="w-16 h-16 rounded-full bg-[#1D3D18] mx-auto flex items-center justify-center text-white text-3xl shadow-lg border border-[#a8e063]/30">
+              🌿
+            </div>
+            
+            <div className="space-y-1">
+              <h2 className="text-xl font-black text-[#1D3D18]">{achievement.plantName} Discovered!</h2>
+              <p className="text-xs text-[#5C6E5A] font-medium">New medicinal herb added to your digital journal.</p>
+            </div>
+
+            <div className="flex justify-center gap-4 py-2">
+              <div className="bg-white/80 border border-[#C5DCD0] px-4 py-2.5 rounded-2xl flex flex-col items-center">
+                <span className="text-[10px] text-[#7A8C78] font-bold uppercase">XP Reward</span>
+                <span className="text-lg font-black text-[#1D3D18] mt-0.5">+{achievement.xp} XP</span>
+              </div>
+              <div className="bg-white/80 border border-[#C5DCD0] px-4 py-2.5 rounded-2xl flex flex-col items-center">
+                <span className="text-[10px] text-[#7A8C78] font-bold uppercase">Points Gained</span>
+                <span className="text-lg font-black text-emerald-600 mt-0.5">+{achievement.pts} pts</span>
+              </div>
+            </div>
+
+            <Button
+              onClick={() => setAchievement(null)}
+              className="w-full bg-[#1D3D18] hover:bg-[#2D6A4F] text-white font-bold rounded-2xl py-3 shadow-md"
+            >
+              Continue Exploring
+            </Button>
+          </Card>
+        </div>
+      )}
+
+      {/* Daily Quiz Modal Popup */}
+      {quizOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+          <Card className="bg-white border border-[#E1EDE4] shadow-2xl max-w-md w-full rounded-3xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-[#1D3D18] text-white p-5 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <HelpCircle className="h-5 w-5 text-[#a8e063]" />
+                <span className="font-extrabold text-sm uppercase tracking-wider">Daily Herb Quiz</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setQuizOpen(false)}
+                className="text-white hover:bg-white/10 p-1.5 h-auto rounded-full"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <CardContent className="p-6 space-y-6">
+              {!quizAnswered ? (
+                <div className="space-y-4">
+                  <div className="bg-[#F4F8F5] border border-[#E1EDE4] p-4 rounded-2xl text-xs font-bold leading-relaxed">
+                    "Which active compound in Turmeric is responsible for its golden color and powerful anti-inflammatory benefits?"
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {["Allicin", "Curcumin", "Gingerol"].map((option) => (
+                      <div
+                        key={option}
+                        onClick={() => setSelectedAnswer(option)}
+                        className={`border p-3 rounded-2xl text-xs font-bold cursor-pointer transition-all flex items-center gap-3 ${
+                          selectedAnswer === option
+                            ? "bg-[#EAF2EC] border-[#2D6A4F] text-[#1D3D18]"
+                            : "bg-white border-[#E1EDE4] hover:bg-[#F4F8F5] text-[#5C6E5A]"
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          selectedAnswer === option ? "border-[#2D6A4F] bg-[#2D6A4F]" : "border-[#C5DCD0]"
+                        }`}>
+                          {selectedAnswer === option && <div className="w-1.5 h-1.5 bg-white rounded-full" />}
+                        </div>
+                        <span>{option}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <Button
+                    onClick={handleAnswerSubmit}
+                    disabled={!selectedAnswer}
+                    className="w-full bg-[#1D3D18] hover:bg-[#2D6A4F] text-white font-bold rounded-2xl py-3 mt-4"
+                  >
+                    Submit Answer
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center space-y-5 py-4">
+                  <div className="w-16 h-16 rounded-full bg-[#EAF2EC] text-[#2D6A4F] mx-auto flex items-center justify-center text-3xl border border-[#C5DCD0]">
+                    {quizCorrect ? "🎉" : "❌"}
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <h3 className="text-base font-extrabold text-[#1D3D18]">
+                      {quizCorrect ? "Quiz Completed Successfully!" : "Try Again Tomorrow"}
+                    </h3>
+                    <p className="text-xs text-[#5C6E5A] font-medium">
+                      {quizCorrect 
+                        ? "Great job! You answered Curcumin. Check back tomorrow for a new herb quiz!" 
+                        : "Better luck next time! The correct answer was Curcumin."}
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={() => setQuizOpen(false)}
+                    className="w-full bg-[#1D3D18] hover:bg-[#2D6A4F] text-white font-bold rounded-2xl py-3"
+                  >
+                    Close
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Enhanced Chatbot Widget */}
       <div className="fixed bottom-6 right-6 z-50">
         {isChatOpen ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-80 h-96 flex flex-col border dark:border-gray-700">
+          <div className="bg-white rounded-3xl shadow-2xl w-80 h-96 flex flex-col border border-[#E1EDE4] overflow-hidden">
             {/* Chat Header */}
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 text-white p-4 rounded-t-2xl flex items-center justify-between">
+            <div className="bg-gradient-to-r from-[#1D3D18] to-[#2D6A4F] text-white p-4 flex items-center justify-between">
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-                  <Leaf className="h-4 w-4" />
+                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+                  <Leaf className="h-4 w-4 text-[#a8e063]" />
                 </div>
                 <div>
-                  <span className="font-medium">AYUSH Expert</span>
-                  <div className="text-xs opacity-90">Online • Ask about plants</div>
+                  <span className="font-extrabold text-xs tracking-wide uppercase">AYUSH Expert</span>
+                  <div className="text-[10px] opacity-90">Ask anything about herbs</div>
                 </div>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsChatOpen(false)}
-                className="text-white hover:bg-white/20 p-1 h-auto"
+                className="text-white hover:bg-white/10 p-1.5 h-auto rounded-full"
               >
                 <X className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 p-4 space-y-3 overflow-y-auto">
+            <div className="flex-1 p-4 space-y-3 overflow-y-auto bg-[#F4F8F5]">
               {chatMessages.map((msg, index) => (
                 <div
                   key={index}
                   className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-xs p-3 rounded-xl ${
+                    className={`max-w-[80%] p-3 rounded-2xl text-xs leading-relaxed ${
                       msg.type === "user"
-                        ? "bg-green-600 text-white rounded-br-none"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-none"
+                        ? "bg-[#1D3D18] text-white rounded-br-none"
+                        : "bg-white border border-[#E1EDE4] text-[#1D3D18] rounded-bl-none shadow-sm"
                     }`}
                   >
-                    <p className="text-sm leading-relaxed">{msg.message}</p>
+                    <p>{msg.message}</p>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* Chat Input */}
-            <div className="p-4 border-t dark:border-gray-700">
+            <div className="p-3 border-t border-[#E1EDE4] bg-white">
               <div className="flex space-x-2">
                 <Input
                   type="text"
@@ -362,14 +711,14 @@ const VirtualGarden = () => {
                   value={chatMessage}
                   onChange={(e) => setChatMessage(e.target.value)}
                   onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-                  className="flex-1 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                  className="flex-1 bg-[#F4F8F5] border-[#E1EDE4] text-xs h-9 rounded-xl focus:ring-[#2D6A4F]"
                 />
                 <Button
                   onClick={handleSendMessage}
                   size="sm"
-                  className="bg-green-600 hover:bg-green-700 px-3"
+                  className="bg-[#1D3D18] hover:bg-[#2D6A4F] px-3.5 h-9 rounded-xl"
                 >
-                  <Send className="h-4 w-4" />
+                  <Send className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
@@ -377,14 +726,14 @@ const VirtualGarden = () => {
         ) : (
           <Button
             onClick={() => setIsChatOpen(true)}
-            className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center space-x-2 transition-all duration-200 hover:scale-105"
+            className="bg-gradient-to-r from-[#1D3D18] to-[#2D6A4F] hover:from-[#2D6A4F] hover:to-[#1D3D18] text-white px-5 py-3 rounded-full shadow-lg flex items-center space-x-2.5 transition-all duration-200 hover:scale-105 border border-[#a8e063]/30"
           >
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              <Leaf className="h-4 w-4" />
+            <div className="w-7 h-7 bg-white/10 rounded-full flex items-center justify-center">
+              <Leaf className="h-3.5 w-3.5 text-[#a8e063]" />
             </div>
             <div className="text-left">
-              <div className="font-medium">AYUSH Expert</div>
-              <div className="text-xs opacity-90">Ask about plants</div>
+              <div className="font-extrabold text-[10px] uppercase tracking-wide leading-none">AYUSH Expert</div>
+              <div className="text-[9px] opacity-80 mt-0.5 leading-none">Chat online</div>
             </div>
           </Button>
         )}

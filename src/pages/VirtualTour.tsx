@@ -312,7 +312,7 @@ const VirtualTour = () => {
 
   // Gamification calculations
   const getLevelInfo = (currentXp: number) => {
-    if (currentXp >= 600) return { title: "✨ Ayurveda Expert", rank: 4, nextXp: 1000, progress: 100 };
+    if (currentXp >= 600) return { title: "✨ Gold Explorer", rank: 4, nextXp: 1000, progress: 100 };
     if (currentXp >= 350) return { title: "🌿 Herbal Researcher", rank: 3, nextXp: 600, progress: ((currentXp - 350) / 250) * 100 };
     if (currentXp >= 150) return { title: "🍃 Plant Explorer", rank: 2, nextXp: 350, progress: ((currentXp - 150) / 200) * 100 };
     return { title: "🌱 Beginner Herbalist", rank: 1, nextXp: 150, progress: (currentXp / 150) * 100 };
@@ -378,11 +378,21 @@ const VirtualTour = () => {
     setExploredPlantIds(newExplored);
     localStorage.setItem("ayurvista_explored_plants", JSON.stringify(newExplored));
 
-    const newXp = xp + 50;
+    const addedXp = 50;
+    const addedPts = 5;
+    const newXp = xp + addedXp;
     setXp(newXp);
     localStorage.setItem("ayurvista_journey_xp", String(newXp));
 
-    toast.success(`+50 XP Gained by exploring ${plant.name}!`);
+    // Update Herbal Points balance
+    const currentPoints = Number(localStorage.getItem("herbal_points_balance") || "860");
+    const newPoints = currentPoints + addedPts;
+    localStorage.setItem("herbal_points_balance", String(newPoints));
+
+    const currentLifetime = Number(localStorage.getItem("lifetime_points_earned") || "960");
+    localStorage.setItem("lifetime_points_earned", String(currentLifetime + addedPts));
+
+    toast.success(`🌿 ${plant.name} Discovered | +${addedXp} XP | +${addedPts} Points!`);
 
     // Check Level Up
     const prevLevel = getLevelInfo(xp).title;

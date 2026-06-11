@@ -7,8 +7,13 @@ const cors = require("cors");
 const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const { OpenAI } = require("openai");
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback_secret_ayurvista";
+
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 const app = express();
 
@@ -23,7 +28,22 @@ app.use(express.static(path.join(__dirname, "../dist")));
 
 // connect mongo
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log("✅ MongoDB connected"))
+  .then(async () => {
+    console.log("✅ MongoDB connected");
+    try {
+      const count = await Plant.countDocuments();
+      if (count === 0) {
+        console.log("🌱 Database is empty. Seeding herbs...");
+        const herbsList = require("./data/herbsData.cjs");
+        await Plant.insertMany(herbsList);
+        console.log(`✅ Successfully seeded ${herbsList.length} herbs into MongoDB!`);
+      } else {
+        console.log(`ℹ️ MongoDB already has ${count} plants. Seeding skipped.`);
+      }
+    } catch (err) {
+      console.error("❌ Seeding plants failed:", err);
+    }
+  })
   .catch(err => console.log(err));
 
 // START SERVER (ONLY ONE TIME)
@@ -68,8 +88,19 @@ const plantSchema = new mongoose.Schema(
   {
     id: { type: Number, required: true, unique: true },
     name: { type: String, required: true },
+    scientificName: { type: String },
     image: { type: String, required: true },
+    tourVideo: { type: String },
     description: { type: String },
+    category: { type: String, default: 'medicinal' },
+    benefitsTags: [String],
+    fullBenefits: [String],
+    detailedUses: [String],
+    precautions: [String],
+    relatedHerbs: [String],
+    symptoms: [String],
+    goals: [String],
+    // keep legacy fields just in case
     benefits: [String],
     uses: [String],
     careInstructions: {
@@ -78,8 +109,7 @@ const plantSchema = new mongoose.Schema(
       temperature: String,
       soil: String
     },
-    medicinalProperties: [String],
-    category: { type: String, default: 'medicinal' }
+    medicinalProperties: [String]
   },
   { timestamps: true }
 );
@@ -345,91 +375,200 @@ app.delete('/api/bookmarks/:plantId', verifyToken, async (req, res) => {
 
 // Initialize in-memory plant data
 const initializePlantData = () => {
-  const plantsData = [
-    {
-      id: 1,
-      name: "Aloe Vera",
-      image: "/lovable-uploads/101fe8a0-5dc6-4ded-a05b-a887722a629d.png",
-      description: "A succulent plant known for its healing properties",
-      benefits: ["Skin healing", "Digestive health", "Immune support"],
-      uses: ["Topical gel", "Juice", "Supplements"],
-      careInstructions: {
-        water: "Water sparingly, allow soil to dry between waterings",
-        light: "Bright, indirect light",
-        temperature: "60-75°F (15-24°C)",
-        soil: "Well-draining cactus mix"
-      },
-      medicinalProperties: ["Anti-inflammatory", "Antimicrobial", "Wound healing"]
-    },
-    {
-      id: 2,
-      name: "Golden Money Plant",
-      image: "/lovable-uploads/124c9240-d734-40d5-aaad-699471ad9889.png",
-      description: "A popular houseplant believed to bring good luck and prosperity",
-      benefits: ["Air purification", "Stress reduction", "Positive energy"],
-      uses: ["Indoor decoration", "Air purification", "Feng shui"],
-      careInstructions: {
-        water: "Water when top inch of soil is dry",
-        light: "Bright, indirect light",
-        temperature: "65-80°F (18-27°C)",
-        soil: "Well-draining potting mix"
-      },
-      medicinalProperties: ["Air purification", "Stress relief"]
-    },
-    {
-      id: 3,
-      name: "Cactus",
-      image: "/lovable-uploads/4569bb5e-341b-40ca-a57d-012a38c41449.png",
-      description: "A hardy desert plant with unique water storage capabilities",
-      benefits: ["Low maintenance", "Air purification", "Unique aesthetics"],
-      uses: ["Indoor decoration", "Garden landscaping", "Medicinal purposes"],
-      careInstructions: {
-        water: "Water every 2-3 weeks, less in winter",
-        light: "Full sun to bright indirect light",
-        temperature: "70-90°F (21-32°C)",
-        soil: "Cactus or succulent mix"
-      },
-      medicinalProperties: ["Water storage", "Adaptogenic"]
-    },
-    {
-      id: 4,
-      name: "Autumn Fern",
-      image: "/lovable-uploads/57676f3f-fcca-4be2-83f5-99907f0f3068.png",
-      description: "A beautiful fern with copper-colored new fronds",
-      benefits: ["Air purification", "Humidity regulation", "Natural beauty"],
-      uses: ["Indoor decoration", "Garden landscaping", "Air purification"],
-      careInstructions: {
-        water: "Keep soil consistently moist",
-        light: "Partial shade to filtered light",
-        temperature: "60-75°F (15-24°C)",
-        soil: "Rich, well-draining soil"
-      },
-      medicinalProperties: ["Air purification", "Humidity control"]
-    },
-    {
-      id: 5,
-      name: "Monstera Deliciosa",
-      image: "/lovable-uploads/b3353135-a7cc-4a7f-861d-ffbce405151c.png",
-      description: "A tropical plant with distinctive split leaves",
-      benefits: ["Air purification", "Large foliage", "Tropical aesthetics"],
-      uses: ["Indoor decoration", "Air purification", "Statement plant"],
-      careInstructions: {
-        water: "Water when top 2 inches are dry",
-        light: "Bright, indirect light",
-        temperature: "65-85°F (18-29°C)",
-        soil: "Well-draining potting mix"
-      },
-      medicinalProperties: ["Air purification", "Large oxygen production"]
-    }
-  ];
-
-  plantsData.forEach(plant => {
-    inMemoryStorage.plants.set(plant.id, plant);
-  });
+  try {
+    const plantsData = require("./data/herbsData.cjs");
+    plantsData.forEach(plant => {
+      inMemoryStorage.plants.set(plant.id, plant);
+    });
+  } catch (err) {
+    console.error("Failed to load in-memory plant data:", err);
+  }
 };
 
 // Initialize plant data
 initializePlantData();
+
+// Search and Recommend Herbs (Paginated & AI Insight)
+app.get('/api/plants/search', async (req, res) => {
+  try {
+    const { query, chip, symptom, ageGroup, goal, page = 1, limit = 4 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageSize = parseInt(limit);
+
+    let dbQuery = {};
+    let isFallback = false;
+
+    // 1. Handle Quick Filter Chip
+    if (chip && chip !== 'View All') {
+      const chipRegex = new RegExp(chip, 'i');
+      dbQuery = {
+        $or: [
+          { category: chipRegex },
+          { benefitsTags: chipRegex },
+          { goals: chipRegex }
+        ]
+      };
+      
+      // Special mappings for quick filters
+      if (chip.toLowerCase() === 'hair fall') {
+        dbQuery.$or.push({ benefitsTags: /hair care/i });
+        dbQuery.$or.push({ category: /haircare/i });
+      }
+      if (chip.toLowerCase() === 'skin care') {
+        dbQuery.$or.push({ benefitsTags: /skin care/i });
+        dbQuery.$or.push({ category: /skincare/i });
+      }
+      if (chip.toLowerCase() === 'digestion') {
+        dbQuery.$or.push({ benefitsTags: /digestion/i });
+        dbQuery.$or.push({ category: /digestive/i });
+      }
+    }
+    // 2. Handle Remedy Finder Form
+    else if (symptom || goal) {
+      let conditions = [];
+      if (goal) {
+        const goalWord = goal.split(" ")[0];
+        conditions.push({ goals: new RegExp(goal, 'i') });
+        conditions.push({ goals: new RegExp(goalWord, 'i') });
+      }
+      if (symptom) {
+        const symptomClean = symptom.replace(/-/g, ' ');
+        const words = symptomClean.split(/\s+/);
+        words.forEach(w => {
+          const r = new RegExp(w, 'i');
+          conditions.push({ symptoms: r });
+          conditions.push({ description: r });
+          conditions.push({ benefitsTags: r });
+        });
+      }
+      
+      if (symptom) {
+        // Match goal OR symptom
+        dbQuery = { $or: conditions };
+      } else {
+        // Match goal
+        dbQuery = { $or: conditions.filter(c => c.goals) };
+      }
+    }
+    // 3. Handle Regular Search Query
+    else if (query && query.trim() !== '') {
+      const term = query.trim();
+      const termRegex = new RegExp(term, 'i');
+      dbQuery = {
+        $or: [
+          { name: termRegex },
+          { scientificName: termRegex },
+          { description: termRegex },
+          { benefitsTags: termRegex },
+          { fullBenefits: termRegex },
+          { detailedUses: termRegex },
+          { symptoms: termRegex },
+          { goals: termRegex }
+        ]
+      };
+    }
+
+    let plants = [];
+    let total = 0;
+
+    if (isMongoConnected()) {
+      total = await Plant.countDocuments(dbQuery);
+      plants = await Plant.find(dbQuery)
+        .sort({ id: 1 })
+        .skip(skip)
+        .limit(pageSize);
+
+      // If no exact match exists for query/filters, show closest relevant herbal recommendations
+      if (plants.length === 0 && (query || chip || symptom || goal)) {
+        console.log(`No exact match. Recommending default/fallback herbs.`);
+        isFallback = true;
+        // Fallback to top wellness herbs (Giloy, Amla, Tulsi, Ashwagandha)
+        const fallbackQuery = {
+          name: { $in: ["Giloy (Guduchi)", "Amla (Indian Gooseberry)", "Tulsi (Holy Basil)", "Ashwagandha (Indian Ginseng)"] }
+        };
+        total = await Plant.countDocuments(fallbackQuery);
+        plants = await Plant.find(fallbackQuery)
+          .sort({ id: 1 })
+          .skip(skip)
+          .limit(pageSize);
+      }
+    } else {
+      // Use In-Memory storage search
+      let allPlants = Array.from(inMemoryStorage.plants.values());
+      let matched = allPlants;
+
+      if (chip && chip !== 'View All') {
+        matched = allPlants.filter(p => 
+          p.category.toLowerCase() === chip.toLowerCase() ||
+          p.benefitsTags.some(tag => tag.toLowerCase().includes(chip.toLowerCase())) ||
+          p.goals.some(g => g.toLowerCase().includes(chip.toLowerCase()))
+        );
+      } else if (symptom || goal) {
+        matched = allPlants.filter(p => {
+          const goalMatch = goal ? p.goals.some(g => g.toLowerCase().includes(goal.toLowerCase().split(" ")[0])) : false;
+          const symptomClean = symptom ? symptom.replace(/-/g, ' ').toLowerCase() : '';
+          const symptomWords = symptomClean.split(/\s+/);
+          const symptomMatch = symptom ? p.symptoms.some(s => symptomWords.some(w => s.toLowerCase().includes(w))) : false;
+          return symptom ? (goalMatch || symptomMatch) : goalMatch;
+        });
+      } else if (query && query.trim() !== '') {
+        const term = query.toLowerCase().trim();
+        matched = allPlants.filter(p => 
+          p.name.toLowerCase().includes(term) ||
+          p.scientificName.toLowerCase().includes(term) ||
+          p.description.toLowerCase().includes(term) ||
+          p.benefitsTags.some(tag => tag.toLowerCase().includes(term)) ||
+          p.symptoms.some(s => s.toLowerCase().includes(term)) ||
+          p.goals.some(g => g.toLowerCase().includes(term))
+        );
+      }
+
+      if (matched.length === 0 && (query || chip || symptom || goal)) {
+        isFallback = true;
+        matched = allPlants.filter(p => 
+          ["Giloy (Guduchi)", "Amla (Indian Gooseberry)", "Tulsi (Holy Basil)", "Ashwagandha (Indian Ginseng)"].includes(p.name)
+        );
+      }
+
+      total = matched.length;
+      plants = matched.slice(skip, skip + pageSize);
+    }
+
+    // AI Ayurvedic Insight explaining why herbs were recommended
+    let aiInsight = '';
+    const apiKey = process.env.GOOGLE_API_KEY;
+    const modelInput = query || chip || (goal ? `${goal} for ${ageGroup || 'Adult'}s (concern: ${symptom || 'general'})` : '');
+    
+    if (modelInput && apiKey && apiKey.trim() !== '') {
+      try {
+        const { GoogleGenerativeAI } = await import("@google/generative-ai");
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+        
+        const plantNames = plants.map(p => p.name).join(", ");
+        const prompt = `You are an Ayurvedic AI assistant. Write a short, highly professional Ayurvedic insight (max 2-3 sentences) explaining why these herbs: [${plantNames}] are recommended for the health concern: "${modelInput}". Keep the tone traditional, reassuring, and medical. Answer in English, unless the concern contains Hindi characters, in which case write in clean Hindi.`;
+        
+        const result = await model.generateContent(prompt);
+        aiInsight = result.response.text().trim();
+      } catch (aiError) {
+        console.error('AI recommendation insight error:', aiError);
+      }
+    }
+
+    res.json({
+      plants,
+      total,
+      aiInsight,
+      page: parseInt(page),
+      limit: pageSize,
+      hasMore: skip + plants.length < total,
+      isFallback
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error searching plants' });
+  }
+});
 
 // Plant endpoints
 app.get('/api/plants', async (req, res) => {
@@ -479,87 +618,10 @@ app.post('/api/plants/seed', async (req, res) => {
   try {
     const count = await Plant.countDocuments();
     if (count > 0) {
-      return res.json({ message: 'Plants already seeded' });
+      return res.json({ message: 'Plants already seeded', count });
     }
 
-    const plantsData = [
-      {
-        id: 1,
-        name: "Aloe Vera",
-        image: "/lovable-uploads/101fe8a0-5dc6-4ded-a05b-a887722a629d.png",
-        description: "A succulent plant known for its healing properties",
-        benefits: ["Skin healing", "Digestive health", "Immune support"],
-        uses: ["Topical gel", "Juice", "Supplements"],
-        careInstructions: {
-          water: "Water sparingly, allow soil to dry between waterings",
-          light: "Bright, indirect light",
-          temperature: "60-75°F (15-24°C)",
-          soil: "Well-draining cactus mix"
-        },
-        medicinalProperties: ["Anti-inflammatory", "Antimicrobial", "Wound healing"]
-      },
-      {
-        id: 2,
-        name: "Golden Money Plant",
-        image: "/lovable-uploads/124c9240-d734-40d5-aaad-699471ad9889.png",
-        description: "A popular houseplant believed to bring good luck and prosperity",
-        benefits: ["Air purification", "Stress reduction", "Positive energy"],
-        uses: ["Indoor decoration", "Air purification", "Feng shui"],
-        careInstructions: {
-          water: "Water when top inch of soil is dry",
-          light: "Bright, indirect light",
-          temperature: "65-80°F (18-27°C)",
-          soil: "Well-draining potting mix"
-        },
-        medicinalProperties: ["Air purification", "Stress relief"]
-      },
-      {
-        id: 3,
-        name: "Cactus",
-        image: "/lovable-uploads/4569bb5e-341b-40ca-a57d-012a38c41449.png",
-        description: "A hardy desert plant with unique water storage capabilities",
-        benefits: ["Low maintenance", "Air purification", "Unique aesthetics"],
-        uses: ["Indoor decoration", "Garden landscaping", "Medicinal purposes"],
-        careInstructions: {
-          water: "Water every 2-3 weeks, less in winter",
-          light: "Full sun to bright indirect light",
-          temperature: "70-90°F (21-32°C)",
-          soil: "Cactus or succulent mix"
-        },
-        medicinalProperties: ["Water storage", "Adaptogenic"]
-      },
-      {
-        id: 4,
-        name: "Autumn Fern",
-        image: "/lovable-uploads/57676f3f-fcca-4be2-83f5-99907f0f3068.png",
-        description: "A beautiful fern with copper-colored new fronds",
-        benefits: ["Air purification", "Humidity regulation", "Natural beauty"],
-        uses: ["Indoor decoration", "Garden landscaping", "Air purification"],
-        careInstructions: {
-          water: "Keep soil consistently moist",
-          light: "Partial shade to filtered light",
-          temperature: "60-75°F (15-24°C)",
-          soil: "Rich, well-draining soil"
-        },
-        medicinalProperties: ["Air purification", "Humidity control"]
-      },
-      {
-        id: 5,
-        name: "Monstera Deliciosa",
-        image: "/lovable-uploads/b3353135-a7cc-4a7f-861d-ffbce405151c.png",
-        description: "A tropical plant with distinctive split leaves",
-        benefits: ["Air purification", "Large foliage", "Tropical aesthetics"],
-        uses: ["Indoor decoration", "Air purification", "Statement plant"],
-        careInstructions: {
-          water: "Water when top 2 inches are dry",
-          light: "Bright, indirect light",
-          temperature: "65-85°F (18-29°C)",
-          soil: "Well-draining potting mix"
-        },
-        medicinalProperties: ["Air purification", "Large oxygen production"]
-      }
-    ];
-
+    const plantsData = require("./data/herbsData.cjs");
     await Plant.insertMany(plantsData);
     res.json({ message: 'Plants seeded successfully', count: plantsData.length });
   } catch (err) {
@@ -846,11 +908,10 @@ app.post('/api/ai/tts', async (req, res) => {
   }
 });
 
-// Plant Q&A endpoint
-// 🌿 Plant Q&A (Clean Text Answer Only)
+// Plant Q&A endpoint (Conversational, Session History, Plant Context Aware)
 app.post("/api/ai/plant-qa", async (req, res) => {
   try {
-    const { query, language } = req.body;
+    const { query, history = [], plantName, scientificName, language } = req.body;
 
     if (!query || typeof query !== "string") {
       return res.status(400).json({ message: "query is required" });
@@ -858,29 +919,27 @@ app.post("/api/ai/plant-qa", async (req, res) => {
 
     const userLang = language === "hi" ? "hi" : "en";
 
-    // 🔥 STRONG LANGUAGE-LOCK PROMPT
-    const prompt =
-      userLang === "hi"
-        ? `आप एक पौधों के विशेषज्ञ हैं।
-
-यूज़र का प्रश्न:
-"${query}"
-
+    // Build the system prompt based on whether we have a specific plant context
+    let systemPrompt = "";
+    if (userLang === "hi") {
+      systemPrompt = `आप एक विशेषज्ञ आयुर्वेदिक चिकित्सक और जड़ी-बूटी विशेषज्ञ हैं।
+${plantName ? `आप यूज़र से "${plantName}" (${scientificName || ''}) नामक जड़ी-बूटी के बारे में बात कर रहे हैं।` : 'आप यूज़र से आयुर्वेदिक जड़ी-बूटियों के बारे में बात कर रहे हैं।'}
 नियम:
-- उत्तर केवल हिंदी में दें
-- अंग्रेज़ी का एक भी शब्द न लिखें
-- सरल, स्पष्ट और उपयोगी उत्तर दें
-- कोई JSON, कोड या formatting न करें`
-        : `You are a plant expert.
-
-User question:
-"${query}"
-
+- उत्तर केवल हिंदी में दें।
+- बातचीत की शैली को संवादात्मक, अत्यंत सहायक और प्रामाणिक रखें।
+- आयुर्वेदिक सिद्धांतों, उपयोगों, सावधानियों, खुराक और पारंपरिक महत्व के आधार पर उत्तर दें।
+- यदि यूज़र कोई असंबंधित प्रश्न पूछता है, तो उसे विनम्रतापूर्वक जड़ी-बूटी, आयुर्वेद या स्वास्थ्य विषयों पर वापस लाएं।
+- उत्तर को संक्षिप्त और व्यावहारिक रखें ताकि पढ़ना आसान हो।`;
+    } else {
+      systemPrompt = `You are an expert Ayurvedic doctor and herbal specialist.
+${plantName ? `You are talking to the user about the herb "${plantName}" (${scientificName || ''}).` : 'You are talking to the user about Ayurvedic herbs and wellness.'}
 Rules:
-- Reply ONLY in English
-- Do NOT use Hindi words
-- Give a clear, simple and helpful answer
-- Do NOT return JSON, code or formatting`;
+- Reply ONLY in English.
+- Keep the style conversational, warm, and highly professional.
+- Focus on Ayurvedic benefits, precautions, traditional uses, and health goals.
+- If the user asks an unrelated question, politely guide them back to herbs, Ayurveda, or holistic health.
+- Keep the responses concise and actionable.`;
+    }
 
     let answerText = "";
 
@@ -888,15 +947,36 @@ Rules:
     try {
       if (!openai) throw new Error("OpenAI not available");
 
+      // Format history into OpenAI Message structure
+      const messages = [
+        { role: "system", content: systemPrompt }
+      ];
+
+      // Add previous messages (limiting to last 10 messages for token safety)
+      const recentHistory = history.slice(-10);
+      recentHistory.forEach(msg => {
+        messages.push({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.text
+        });
+      });
+
+      // Add current user query
+      messages.push({ role: "user", content: query });
+
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        messages: [{ role: "user", content: prompt }],
-        temperature: 0.3,
+        messages: messages,
+        temperature: 0.6,
+        max_tokens: 500
       });
 
       answerText = completion.choices[0].message?.content || "";
     } catch (err) {
-      console.warn("⚠️ OpenAI failed, switching to Gemini");
+  console.error("🚨 OPENAI ERROR:", err);
+  console.warn("⚠️ OpenAI failed, switching to Gemini");
+    // } catch (err) {
+    //   console.warn("⚠️ OpenAI failed, switching to Gemini");
 
       /* ===== GEMINI FALLBACK ===== */
       const { GoogleGenerativeAI } = await import("@google/generative-ai");
@@ -905,11 +985,28 @@ Rules:
         model: "gemini-2.5-flash-lite",
       });
 
-      const result = await model.generateContent(prompt);
+      // Construct a single consolidated prompt with conversation history for Gemini
+      let fullPrompt = `${systemPrompt}\n\n`;
+      if (plantName) {
+        fullPrompt += `Context: The user is currently viewing ${plantName} (${scientificName || ''}). All answers should prioritize this herb unless the user asks about another herb.\n\n`;
+      }
+      
+      if (history && history.length > 0) {
+        fullPrompt += `Conversation History:\n`;
+        const recentHistory = history.slice(-10);
+        recentHistory.forEach(msg => {
+          const role = msg.sender === 'user' ? 'User' : 'Assistant';
+          fullPrompt += `${role}: ${msg.text}\n`;
+        });
+      }
+      
+      fullPrompt += `User: ${query}\nAssistant:`;
+
+      const result = await model.generateContent(fullPrompt);
       answerText = result.response.text();
     }
 
-    // 🔹 CLEAN ANY LEFTOVER FORMATTING
+    // Clean any leftover formatting
     const cleanAnswer = answerText
       .replace(/```/g, "")
       .replace(/json/gi, "")
@@ -917,25 +1014,28 @@ Rules:
 
     return res.json({
       answer: cleanAnswer,
-      plantName: null,
+      plantName: plantName || null,
       intent: "general",
       language: userLang,
       fromDatabase: false,
     });
   } catch (err) {
-    console.error("PLANT QA ERROR:", err);
-    return res.status(500).json({
-      answer:
-        language === "hi"
-          ? "क्षमा करें, कुछ समस्या आ गई है।"
-          : "Sorry, something went wrong.",
-      plantName: null,
-      intent: "general",
-      language: language || "en",
-      fromDatabase: false,
-    });
-  }
-});
+  console.error("PLANT QA ERROR:", err);
+
+  const fallbackLang = req.body?.language === "hi" ? "hi" : "en";
+
+  return res.status(500).json({
+    answer:
+      fallbackLang === "hi"
+        ? "क्षमा करें, कुछ समस्या आ गई है।"
+        : "Sorry, something went wrong.",
+    plantName: null,
+    intent: "general",
+    language: fallbackLang,
+    fromDatabase: false,
+  });
+}
+}); 
 
 // Herbal Guide Narration: expects { plantName, uses, origin, benefits, category }
 // Responds with { narration: string } - 20 seconds Hindi narration in Ayurvedic style
